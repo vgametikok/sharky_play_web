@@ -42,22 +42,41 @@ export function login() {
   });
 }
 
-// Вход через Telegram Login Widget: подписанные виджетом данные проверяет
-// edge-функция tg-auth (mode:'widget'), в ответ приходит token_hash,
-// которым обмениваемся на настоящую Supabase-сессию.
+// Вход через Telegram БЕЗ номера телефона (deep-link бота):
+// 1) tg-login создаёт одноразовый токен и ссылку t.me/бот?start=lg_<токен>;
+// 2) пользователь открывает её (приложение или веб) и жмёт Start;
+// 3) webhook бота подтверждает токен подлинным telegram_id;
+// 4) сайт поллит статус и обменивает токен на сессию через tg-auth.
 // Аккаунт ТОТ ЖЕ, что и в мобильной ленте (общий telegram_id).
-export async function tgLogin(widgetUser) {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/tg-auth`, {
+const fnCall = (fn, payload) =>
+  fetch(`${SUPABASE_URL}/functions/v1/${fn}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON },
-    body: JSON.stringify({ mode: 'widget', widget: widgetUser }),
+    body: JSON.stringify(payload),
+  }).then((r) => {
+    if (!r.ok) throw new Error(fn + ' ' + r.status);
+    return r.json();
   });
-  if (!res.ok) throw new Error('tg-auth ' + res.status);
-  const { token_hash } = await res.json();
-  // ВАЖНО: только token_hash + type, без email/token (иначе Auth вернёт 400).
-  const { error } = await sb.auth.verifyOtp({ token_hash, type: 'email' });
-  if (error) throw error;
-  location.reload();
+
+export async function tgTokenLogin(onStatus) {
+  const { token, link } = await fnCall('tg-login', { action: 'new' });
+  window.open(link, '_blank', 'noopener');
+  if (onStatus) onStatus('waiting');
+  const deadline = Date.now() + 5 * 60 * 1000;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 2000));
+    const { status } = await fnCall('tg-login', { action: 'check', token });
+    if (status === 'confirmed') {
+      const { token_hash } = await fnCall('tg-auth', { mode: 'logintoken', token });
+      // ВАЖНО: только token_hash + type, без email/token (иначе Auth вернёт 400).
+      const { error } = await sb.auth.verifyOtp({ token_hash, type: 'email' });
+      if (error) throw error;
+      location.reload();
+      return;
+    }
+    if (status === 'used' || status === 'unknown') throw new Error('token ' + status);
+  }
+  throw new Error('login timeout');
 }
 
 export async function logout() {

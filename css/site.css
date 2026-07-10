@@ -88,6 +88,9 @@ img { max-width: 100%; display: block; }
 .btn-primary:hover { filter: brightness(1.12); background: var(--brand); }
 .btn-google { background: #fff; color: #1c1c1e; }
 .btn-google:hover { background: #ececf0; }
+.btn-tg { background: #2aabee; color: #fff; }
+.btn-tg:hover { background: #37b3f2; }
+.btn-tg:disabled { opacity: .7; cursor: default; }
 .btn-ghost { background: transparent; color: var(--text2); }
 .btn-ghost:hover { background: var(--bg3); color: var(--text); }
 .btn-sub { background: #fff; color: #000; }
@@ -286,7 +289,6 @@ main { max-width: 1440px; margin: 0 auto; padding: 10px 26px 70px; }
 .modal-emoji { font-size: 46px; }
 .modal h3 { font-size: 19px; letter-spacing: -.01em; }
 .modal p { color: var(--text2); font-size: 14px; line-height: 1.45; }
-.tg-widget { display: flex; justify-content: center; min-height: 40px; }
 
 /* ── Адаптив ── */
 @media (max-width: 720px) {

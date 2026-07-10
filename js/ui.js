@@ -1,8 +1,8 @@
 // Общие UI-компоненты: DOM-хелпер, топбар, карточка игры, чипы, логин-модалка.
 // БЕЗОПАСНОСТЬ: весь пользовательский контент попадает в DOM только через
 // textContent (el-хелпер) — никакого innerHTML с данными из БД.
-import { getMe, login, logout, tgLogin, fmt } from './sb.js';
-import { GAMES_BASE, ALLOWED_GAME_ORIGINS, TG_BOT, SUPABASE_URL } from './config.js';
+import { getMe, login, logout, tgTokenLogin, fmt } from './sb.js';
+import { GAMES_BASE, ALLOWED_GAME_ORIGINS, SUPABASE_URL } from './config.js';
 
 export function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -133,46 +133,35 @@ export function chipBar(items, active, onPick) {
 
 export function showLoginModal() {
   if (document.querySelector('.modal-back')) return;
-  const tgHost = el('div', { class: 'tg-widget' });
+  // Вход через Telegram БЕЗ телефона: deep-link t.me/бот?start=<токен> —
+  // открывается приложение/веб Telegram, пользователь жмёт Start, сайт
+  // поллит подтверждение (tgTokenLogin) и сам завершает вход.
+  const hint = el('p', {}, 'Один аккаунт для сайта и Telegram: лайки, подписки, комментарии и история игр.');
+  const tgBtn = el('button', {
+    class: 'btn btn-tg',
+    onclick: async () => {
+      tgBtn.disabled = true;
+      tgBtn.textContent = 'Подтвердите вход в Telegram…';
+      hint.textContent = 'Открылся Telegram? Нажмите Start у бота — вход завершится сам.';
+      try {
+        await tgTokenLogin();
+      } catch (err) {
+        console.error('tgTokenLogin:', err);
+        tgBtn.disabled = false;
+        tgBtn.textContent = 'Войти через Telegram';
+        hint.textContent = 'Не получилось. Откройте Telegram и попробуйте ещё раз.';
+      }
+    },
+  }, 'Войти через Telegram');
   const back = el('div', { class: 'modal-back', onclick: (e) => { if (e.target === back) back.remove(); } },
     el('div', { class: 'modal' },
       el('div', { class: 'modal-emoji' }, '🦈'),
       el('h3', {}, 'Войдите в Sharky'),
-      el('p', {}, 'Один аккаунт для сайта и Telegram: лайки, подписки, комментарии и история игр.'),
+      hint,
+      tgBtn,
       el('button', { class: 'btn btn-google', onclick: login }, 'Войти через Google'),
-      tgHost,
       el('button', { class: 'btn btn-ghost', onclick: () => back.remove() }, 'Не сейчас')));
   document.body.append(back);
-  // Кнопка Telegram: embed-iframe oauth.telegram.org НАПРЯМУЮ, без виджет-скрипта
-  // telegram.org (он ненадёжно рендерится при динамической вставке в модалку).
-  // Слушаем postMessage от oauth.telegram.org — ровно тот же протокол, что
-  // использует официальный виджет. Требование Telegram: /setdomain у BotFather.
-  const tgSrc = 'https://oauth.telegram.org/embed/' + TG_BOT
-    + '?origin=' + encodeURIComponent(location.origin)
-    + '&return_to=' + encodeURIComponent(location.href)
-    + '&size=large&userpic=false&radius=22&request_access=write&lang=ru';
-  const tgFrame = el('iframe', {
-    src: tgSrc, scrolling: 'no', title: 'Войти через Telegram',
-    style: { border: '0', width: '240px', height: '44px', colorScheme: 'auto' },
-  });
-  tgHost.append(tgFrame);
-  const onTgMessage = (e) => {
-    if (e.origin !== 'https://oauth.telegram.org') return;
-    let d;
-    try { d = JSON.parse(e.data); } catch { return; }
-    if (d.event === 'auth_user' && d.auth_data) {
-      window.removeEventListener('message', onTgMessage);
-      tgLogin(d.auth_data).catch((err) => {
-        console.error('tgLogin:', err);
-        const p = back.querySelector('p');
-        if (p) p.textContent = 'Не удалось войти через Telegram. Попробуйте ещё раз.';
-      });
-    } else if (d.event === 'resize') {
-      if (d.width) tgFrame.style.width = Math.min(d.width, 320) + 'px';
-      if (d.height) tgFrame.style.height = Math.min(d.height, 60) + 'px';
-    }
-  };
-  window.addEventListener('message', onTgMessage);
 }
 
 // Вернёт профиль или покажет логин-модалку и вернёт null.
