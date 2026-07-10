@@ -1,0 +1,26 @@
+// Публичная конфигурация Sharky Web.
+// ВАЖНО: здесь НЕТ секретов. Anon-ключ Supabase — публичный по дизайну:
+// все данные защищает RLS на сервере. service_role и прочие секреты
+// живут только в edge-функциях и никогда не попадают в код сайта.
+export const SUPABASE_URL = 'https://safjqsofdrxdmvnfgvjf.supabase.co';
+export const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNhZmpxc29mZHJ4ZG12bmZndmpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4Nzk2NDgsImV4cCI6MjA5NjQ1NTY0OH0.gcZ452loXUS0fmApZLr7PqvIYYZ8TqxIX2plgLNnoDo';
+
+// Игры с относительным src лежат в репозитории мобильной ленты.
+export const GAMES_BASE = 'https://vgametikok.github.io/sharky_play/';
+
+// Белый список источников, откуда разрешено грузить игры в iframe
+// (дублирует frame-src в CSP — защита в глубину).
+export const ALLOWED_GAME_ORIGINS = [
+  'https://vgametikok.github.io',
+  SUPABASE_URL,
+];
+
+export const GENRES = [
+  ['arcade', 'Аркады'],
+  ['puzzle', 'Головоломки'],
+  ['reaction', 'Реакция'],
+  ['memory', 'Память'],
+  ['logic', 'Логика'],
+  ['other', 'Другое'],
+];
+export const GENRE_LABEL = Object.fromEntries(GENRES);
