@@ -2,7 +2,7 @@
 // БЕЗОПАСНОСТЬ: весь пользовательский контент попадает в DOM только через
 // textContent (el-хелпер) — никакого innerHTML с данными из БД.
 import { getMe, login, logout, tgLogin, fmt } from './sb.js';
-import { GAMES_BASE, ALLOWED_GAME_ORIGINS, TG_BOT } from './config.js';
+import { GAMES_BASE, ALLOWED_GAME_ORIGINS, TG_BOT, SUPABASE_URL } from './config.js';
 
 export function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -47,6 +47,13 @@ export function resolveGameSrc(src) {
   } catch { return null; }
   return url;
 }
+
+// Игры из Supabase Storage нельзя грузить прямым iframe src: платформа
+// намеренно отдаёт .html как text/plain (анти-фишинг; edge-функции она
+// даунгрейдит так же). Такие игры доставляем как мобильная лента: fetch + srcdoc.
+export const isStorageGame = (url) => {
+  try { return new URL(url).origin === SUPABASE_URL; } catch { return false; }
+};
 
 export async function initTopbar() {
   const bar = document.getElementById('topbar');
@@ -136,23 +143,36 @@ export function showLoginModal() {
       tgHost,
       el('button', { class: 'btn btn-ghost', onclick: () => back.remove() }, 'Не сейчас')));
   document.body.append(back);
-  // Telegram Login Widget рисует свою кнопку-iframe внутри tgHost.
-  // Требование Telegram: домен сайта должен быть задан боту через /setdomain.
-  window.onTelegramAuth = (user) => {
-    tgLogin(user).catch((err) => {
-      console.error('tgLogin:', err);
-      const p = back.querySelector('p');
-      if (p) p.textContent = 'Не удалось войти через Telegram. Попробуйте ещё раз.';
-    });
+  // Кнопка Telegram: embed-iframe oauth.telegram.org НАПРЯМУЮ, без виджет-скрипта
+  // telegram.org (он ненадёжно рендерится при динамической вставке в модалку).
+  // Слушаем postMessage от oauth.telegram.org — ровно тот же протокол, что
+  // использует официальный виджет. Требование Telegram: /setdomain у BotFather.
+  const tgSrc = 'https://oauth.telegram.org/embed/' + TG_BOT
+    + '?origin=' + encodeURIComponent(location.origin)
+    + '&return_to=' + encodeURIComponent(location.href)
+    + '&size=large&userpic=false&radius=22&request_access=write&lang=ru';
+  const tgFrame = el('iframe', {
+    src: tgSrc, scrolling: 'no', title: 'Войти через Telegram',
+    style: { border: '0', width: '240px', height: '44px', colorScheme: 'auto' },
+  });
+  tgHost.append(tgFrame);
+  const onTgMessage = (e) => {
+    if (e.origin !== 'https://oauth.telegram.org') return;
+    let d;
+    try { d = JSON.parse(e.data); } catch { return; }
+    if (d.event === 'auth_user' && d.auth_data) {
+      window.removeEventListener('message', onTgMessage);
+      tgLogin(d.auth_data).catch((err) => {
+        console.error('tgLogin:', err);
+        const p = back.querySelector('p');
+        if (p) p.textContent = 'Не удалось войти через Telegram. Попробуйте ещё раз.';
+      });
+    } else if (d.event === 'resize') {
+      if (d.width) tgFrame.style.width = Math.min(d.width, 320) + 'px';
+      if (d.height) tgFrame.style.height = Math.min(d.height, 60) + 'px';
+    }
   };
-  const s = document.createElement('script');
-  s.src = 'https://telegram.org/js/telegram-widget.js?22';
-  s.async = true;
-  s.setAttribute('data-telegram-login', TG_BOT);
-  s.setAttribute('data-size', 'large');
-  s.setAttribute('data-radius', '22');
-  s.setAttribute('data-onauth', 'onTelegramAuth(user)');
-  tgHost.append(s);
+  window.addEventListener('message', onTgMessage);
 }
 
 // Вернёт профиль или покажет логин-модалку и вернёт null.

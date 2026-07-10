@@ -2,7 +2,7 @@
 // описание, комментарии, учёт игрового времени в game_stats.
 import { sb, getMe, fmt, fmtDate } from './sb.js';
 import { SUPABASE_URL, SUPABASE_ANON, GENRE_LABEL } from './config.js';
-import { el, initTopbar, avatar, channelHref, resolveGameSrc, requireLogin, loadingEl, emptyEl } from './ui.js';
+import { el, initTopbar, avatar, channelHref, resolveGameSrc, isStorageGame, requireLogin, loadingEl, emptyEl } from './ui.js';
 
 const app = document.getElementById('app');
 const params = new URLSearchParams(location.search);
@@ -43,12 +43,27 @@ function render() {
   app.replaceChildren();
 
   // Плеер: sandbox БЕЗ allow-same-origin — игра не может выйти из песочницы.
+  // github.io-игры — прямой src (отдельный origin, CSP не наследуется).
+  // Storage-игры — fetch + srcdoc (Storage отдаёт .html как text/plain);
+  // srcdoc наследует CSP этой страницы, поэтому game.html разрешает
+  // 'unsafe-inline' в script-src (инлайн-скрипты самих игр).
   const src = resolveGameSrc(g.src);
   const player = el('div', { class: 'player ' + (g.orientation === 'landscape' ? 'landscape' : 'portrait') });
   if (src) {
-    iframe = el('iframe', { src, sandbox: 'allow-scripts', allow: 'autoplay', title: g.title });
+    iframe = el('iframe', { sandbox: 'allow-scripts', allow: 'autoplay', title: g.title });
     player.append(iframe);
     window.addEventListener('message', onGameMessage);
+    if (isStorageGame(src)) {
+      fetch(src)
+        .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+        .then((html) => { iframe.srcdoc = html; })
+        .catch((err) => {
+          console.error('game load:', err);
+          player.replaceChildren(emptyEl('Не удалось загрузить игру. Обновите страницу.'));
+        });
+    } else {
+      iframe.src = src;
+    }
   } else {
     player.append(emptyEl('Источник игры не разрешён'));
   }
