@@ -5,7 +5,16 @@ import { SUPABASE_URL, SUPABASE_ANON, GENRE_LABEL } from './config.js';
 import { el, initTopbar, avatar, channelHref, resolveGameSrc, requireLogin, loadingEl, emptyEl } from './ui.js';
 
 const app = document.getElementById('app');
-const gameId = new URLSearchParams(location.search).get('id') || '';
+const params = new URLSearchParams(location.search);
+const gameId = params.get('id') || '';
+
+// Провенанс показа: какая секция сайта привела к запуску (для recsys/A/B).
+// Белый список — произвольные значения из URL в БД не попадают.
+const FEED_SOURCES = {
+  feed: 'web_feed', popular: 'web_popular', fresh: 'web_fresh',
+  continue: 'web_continue', search: 'web_search', channel: 'web_channel',
+};
+const FEED_SOURCE = FEED_SOURCES[params.get('from')] || 'web_game';
 
 initTopbar();
 load();
@@ -97,13 +106,15 @@ function renderActions() {
   const c = D.counts, my = D.my;
   const host = document.getElementById('gActions');
   host.replaceChildren(
-    el('button', { class: 'btn' + (my.liked ? ' on' : ''), onclick: () => toggleMark('liked', 'likes') },
-      `👍 ${fmt(c.likes)}`),
-    el('button', { class: 'btn' + (my.disliked ? ' on' : ''), onclick: () => toggleMark('disliked', 'dislikes') },
-      `👎 ${fmt(c.dislikes)}`),
+    // Сегментированная пара лайк/дизлайк (как на YouTube).
+    el('div', { class: 'seg' },
+      el('button', { class: my.liked ? 'on' : '', onclick: () => toggleMark('liked', 'likes') },
+        `👍 ${fmt(c.likes)}`),
+      el('button', { class: my.disliked ? 'on' : '', onclick: () => toggleMark('disliked', 'dislikes') },
+        `👎 ${fmt(c.dislikes)}`)),
     el('button', { class: 'btn' + (my.saved ? ' on' : ''), onclick: () => toggleMark('saved', 'saves') },
       `⭐ ${fmt(c.saves)}`),
-    el('button', { class: 'btn', onclick: doShare }, `↗ ${fmt(c.shares)}`),
+    el('button', { class: 'btn', onclick: doShare }, `↗ Поделиться`),
   );
 }
 
@@ -286,7 +297,7 @@ async function startDwellTracking() {
   statId = crypto.randomUUID();
   const { error } = await sb.from('game_stats').insert({
     id: statId, game_id: gameId, user_id: me.id,
-    active_ms: 0, loaded: true, feed_source: 'web_game',
+    active_ms: 0, loaded: true, feed_source: FEED_SOURCE,
   });
   if (error) { console.error('game_stats insert:', error.message); statId = null; return; }
   visibleSince = document.visibilityState === 'visible' ? performance.now() : null;

@@ -1,8 +1,8 @@
 // Общие UI-компоненты: DOM-хелпер, топбар, карточка игры, чипы, логин-модалка.
 // БЕЗОПАСНОСТЬ: весь пользовательский контент попадает в DOM только через
 // textContent (el-хелпер) — никакого innerHTML с данными из БД.
-import { getMe, login, logout, fmt } from './sb.js';
-import { GAMES_BASE, ALLOWED_GAME_ORIGINS } from './config.js';
+import { getMe, login, logout, tgLogin, fmt } from './sb.js';
+import { GAMES_BASE, ALLOWED_GAME_ORIGINS, TG_BOT } from './config.js';
 
 export function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -34,7 +34,9 @@ export function avatar(u, size = 36) {
 }
 
 export const channelHref = (username) => 'channel.html?u=' + encodeURIComponent(username || '');
-export const gameHref = (id) => 'game.html?id=' + encodeURIComponent(id || '');
+// from — провенанс показа (какая секция привела на игру), уходит в game_stats.feed_source.
+export const gameHref = (id, from) =>
+  'game.html?id=' + encodeURIComponent(id || '') + (from ? '&from=' + encodeURIComponent(from) : '');
 
 // Абсолютный URL игры + проверка по белому списку источников.
 export function resolveGameSrc(src) {
@@ -60,7 +62,7 @@ export async function initTopbar() {
   const auth = bar.querySelector('#tbAuth');
   const me = await getMe();
   if (!me) {
-    auth.append(el('button', { class: 'btn btn-primary', onclick: login }, 'Войти'));
+    auth.append(el('button', { class: 'btn btn-primary', onclick: showLoginModal }, 'Войти'));
     return;
   }
   const menu = el('div', { class: 'tb-menu hidden' },
@@ -77,8 +79,8 @@ export async function initTopbar() {
   });
 }
 
-export function gameCard(g) {
-  const href = gameHref(g.id);
+export function gameCard(g, from) {
+  const href = gameHref(g.id, from);
   const a = g.author || {};
   const thumb = el('a', { class: 'thumb', href, 'aria-label': g.title });
   if (g.thumbnail_url) {
@@ -88,8 +90,10 @@ export function gameCard(g) {
       `linear-gradient(135deg, ${safeColor(g.bg) || '#15121c'}, ${safeColor(g.accent) || '#3a2b4d'})`;
     thumb.append(el('div', { class: 'thumb-emoji' }, g.emoji || '🎮'));
   }
-  thumb.append(el('span', { class: 'thumb-badge', title: g.orientation === 'landscape' ? 'Горизонтальная' : 'Вертикальная' },
-    g.orientation === 'landscape' ? '▭' : '▯'));
+  thumb.append(
+    el('span', { class: 'thumb-play' }, '▶'),
+    el('span', { class: 'thumb-badge', title: g.orientation === 'landscape' ? 'Горизонтальная' : 'Вертикальная' },
+      g.orientation === 'landscape' ? '▭' : '▯'));
   const avLink = el('a', { href: channelHref(a.username) });
   avLink.append(avatar(a, 36));
   return el('article', { class: 'card' },
@@ -102,6 +106,18 @@ export function gameCard(g) {
         el('div', { class: 'card-meta' }, `${fmt(g.plays)} играли · ${fmt(g.likes)} лайков`))));
 }
 
+// Скелетоны на время загрузки (вместо текста «Загрузка…»).
+export function skeletonCards(n = 8) {
+  return Array.from({ length: n }, () =>
+    el('div', { class: 'card sk' },
+      el('div', { class: 'thumb sk-shimmer' }),
+      el('div', { class: 'card-body' },
+        el('div', { class: 'avatar sk-shimmer', style: { width: '36px', height: '36px' } }),
+        el('div', { class: 'card-info', style: { flex: '1' } },
+          el('div', { class: 'sk-line sk-shimmer' }),
+          el('div', { class: 'sk-line sk-shimmer short' })))));
+}
+
 export function chipBar(items, active, onPick) {
   return el('div', { class: 'chips' },
     items.map(([val, label]) =>
@@ -110,14 +126,33 @@ export function chipBar(items, active, onPick) {
 
 export function showLoginModal() {
   if (document.querySelector('.modal-back')) return;
+  const tgHost = el('div', { class: 'tg-widget' });
   const back = el('div', { class: 'modal-back', onclick: (e) => { if (e.target === back) back.remove(); } },
     el('div', { class: 'modal' },
       el('div', { class: 'modal-emoji' }, '🦈'),
       el('h3', {}, 'Войдите в Sharky'),
-      el('p', {}, 'Лайки, подписки, комментарии и история игр доступны после входа.'),
-      el('button', { class: 'btn btn-primary', onclick: login }, 'Войти через Google'),
-      el('button', { class: 'btn', onclick: () => back.remove() }, 'Не сейчас')));
+      el('p', {}, 'Один аккаунт для сайта и Telegram: лайки, подписки, комментарии и история игр.'),
+      el('button', { class: 'btn btn-google', onclick: login }, 'Войти через Google'),
+      tgHost,
+      el('button', { class: 'btn btn-ghost', onclick: () => back.remove() }, 'Не сейчас')));
   document.body.append(back);
+  // Telegram Login Widget рисует свою кнопку-iframe внутри tgHost.
+  // Требование Telegram: домен сайта должен быть задан боту через /setdomain.
+  window.onTelegramAuth = (user) => {
+    tgLogin(user).catch((err) => {
+      console.error('tgLogin:', err);
+      const p = back.querySelector('p');
+      if (p) p.textContent = 'Не удалось войти через Telegram. Попробуйте ещё раз.';
+    });
+  };
+  const s = document.createElement('script');
+  s.src = 'https://telegram.org/js/telegram-widget.js?22';
+  s.async = true;
+  s.setAttribute('data-telegram-login', TG_BOT);
+  s.setAttribute('data-size', 'large');
+  s.setAttribute('data-radius', '22');
+  s.setAttribute('data-onauth', 'onTelegramAuth(user)');
+  tgHost.append(s);
 }
 
 // Вернёт профиль или покажет логин-модалку и вернёт null.

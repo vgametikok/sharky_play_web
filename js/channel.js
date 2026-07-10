@@ -72,7 +72,7 @@ function render(ch, games) {
   // Случайная игра канала
   if (games.length) {
     const g = games[Math.floor(Math.random() * games.length)];
-    const thumb = el('a', { class: 'thumb', href: gameHref(g.id) });
+    const thumb = el('a', { class: 'thumb', href: gameHref(g.id, 'channel') });
     if (g.thumbnail_url) thumb.append(el('img', { src: g.thumbnail_url, alt: '' }));
     else {
       thumb.style.background =
@@ -82,12 +82,12 @@ function render(ch, games) {
     app.append(el('div', { class: 'featured' },
       thumb,
       el('div', { class: 'featured-info' },
-        el('h2', {}, el('a', { href: gameHref(g.id) }, g.title)),
+        el('h2', {}, el('a', { href: gameHref(g.id, 'channel') }, g.title)),
         el('div', { class: 'card-meta', style: { marginBottom: '8px' } },
           `${GENRE_LABEL[g.genre] || g.genre} · ${fmt(g.plays)} играли · ${fmt(g.likes)} лайков`),
         el('p', {}, g.description || 'Без описания — просто откройте и играйте!'),
         el('div', { style: { marginTop: '12px' } },
-          el('a', { class: 'btn btn-primary', href: gameHref(g.id) }, '▶ Играть')))));
+          el('a', { class: 'btn btn-primary', href: gameHref(g.id, 'channel') }, '▶ Играть')))));
   }
 
   // Список игр с рубрикатором
@@ -99,7 +99,7 @@ function render(ch, games) {
   const genres = [...new Set(games.map((g) => g.genre).filter(Boolean))];
   const renderGrid = () => {
     const list = genreFilter ? games.filter((g) => g.genre === genreFilter) : games;
-    grid.replaceChildren(...(list.length ? list.map(gameCard) : [emptyEl('Нет игр в этом жанре')]));
+    grid.replaceChildren(...(list.length ? list.map((g) => gameCard(g, 'channel')) : [emptyEl('Нет игр в этом жанре')]));
   };
   const renderChips = () => {
     if (genres.length < 2) return;

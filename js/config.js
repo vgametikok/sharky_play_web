@@ -5,6 +5,11 @@
 export const SUPABASE_URL = 'https://safjqsofdrxdmvnfgvjf.supabase.co';
 export const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNhZmpxc29mZHJ4ZG12bmZndmpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4Nzk2NDgsImV4cCI6MjA5NjQ1NTY0OH0.gcZ452loXUS0fmApZLr7PqvIYYZ8TqxIX2plgLNnoDo';
 
+// Бот для Telegram Login Widget (тот же, что у мини-аппа).
+// Для работы виджета у @BotFather должен быть выполнен /setdomain
+// на домен сайта: vgametikok.github.io
+export const TG_BOT = 'sharkyplay_bot';
+
 // Игры с относительным src лежат в репозитории мобильной ленты.
 export const GAMES_BASE = 'https://vgametikok.github.io/sharky_play/';
 

@@ -42,6 +42,24 @@ export function login() {
   });
 }
 
+// Вход через Telegram Login Widget: подписанные виджетом данные проверяет
+// edge-функция tg-auth (mode:'widget'), в ответ приходит token_hash,
+// которым обмениваемся на настоящую Supabase-сессию.
+// Аккаунт ТОТ ЖЕ, что и в мобильной ленте (общий telegram_id).
+export async function tgLogin(widgetUser) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/tg-auth`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON },
+    body: JSON.stringify({ mode: 'widget', widget: widgetUser }),
+  });
+  if (!res.ok) throw new Error('tg-auth ' + res.status);
+  const { token_hash } = await res.json();
+  // ВАЖНО: только token_hash + type, без email/token (иначе Auth вернёт 400).
+  const { error } = await sb.auth.verifyOtp({ token_hash, type: 'email' });
+  if (error) throw error;
+  location.reload();
+}
+
 export async function logout() {
   await sb.auth.signOut();
   location.href = 'index.html';

@@ -30,7 +30,7 @@ async function load(append = false) {
     grid.replaceChildren(emptyEl('Ошибка поиска. Попробуйте ещё раз.'));
     return;
   }
-  const cards = data.map(gameCard);
+  const cards = data.map((g) => gameCard(g, 'search'));
   if (append) grid.append(...cards);
   else grid.replaceChildren(...(cards.length ? cards : [emptyEl('Ничего не найдено')]));
   if (data.length === PAGE) {

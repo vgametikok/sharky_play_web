@@ -75,7 +75,7 @@ async function renderMyGames(me) {
       'У вас пока нет опубликованных игр. Загрузка игр появится здесь в следующем обновлении.'));
     return;
   }
-  section.append(el('div', { class: 'grid' }, games.map(gameCard)));
+  section.append(el('div', { class: 'grid' }, games.map((g) => gameCard(g, 'channel'))));
 }
 
 /* ── История игр ── */
@@ -95,7 +95,7 @@ async function renderHistory() {
   }
   section.append(...rows.map((r) => {
     const g = r.game;
-    const thumb = el('a', { class: 'hist-thumb', href: gameHref(g.id) });
+    const thumb = el('a', { class: 'hist-thumb', href: gameHref(g.id, 'continue') });
     if (g.thumbnail_url) thumb.append(el('img', { src: g.thumbnail_url, alt: '' }));
     else {
       thumb.style.background =
@@ -106,7 +106,7 @@ async function renderHistory() {
     return el('div', { class: 'hist-item' },
       thumb,
       el('div', { class: 'hist-info' },
-        el('a', { class: 'hist-title', href: gameHref(g.id) }, g.title),
+        el('a', { class: 'hist-title', href: gameHref(g.id, 'continue') }, g.title),
         el('div', { class: 'hist-meta' },
           `${g.author.display_name || g.author.username} · последняя игра ${fmtDate(r.last_played)}` +
           ` · сессий: ${fmt(r.sessions)}${mins ? ` · ~${mins} мин` : ''}`)));
