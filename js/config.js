@@ -20,6 +20,12 @@ export const ALLOWED_GAME_ORIGINS = [
   SUPABASE_URL,
 ];
 
+// Отдельный проект Supabase для облачных сейвов прогресса (не основной!):
+// личность игрока проверяет edge-функция progress по токену основного проекта.
+// Ключ публичный по дизайну — данные защищает RLS + серверная проверка токена.
+export const SAVES_FN = 'https://twvagexajheoapzskvjw.supabase.co/functions/v1/progress';
+export const SAVES_ANON = 'sb_publishable_z7qy94kQKbXMtvMPVZGziw_cVpfLgDI';
+
 export const GENRES = [
   ['arcade', 'Аркады'],
   ['puzzle', 'Головоломки'],

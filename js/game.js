@@ -1,7 +1,7 @@
 // Страница игры («watch»): плеер, канал, лайк/дизлайк/избранное/поделиться,
 // описание, комментарии, учёт игрового времени в game_stats.
 import { sb, getMe, fmt, fmtDate } from './sb.js';
-import { SUPABASE_URL, SUPABASE_ANON, GENRE_LABEL } from './config.js';
+import { SUPABASE_URL, SUPABASE_ANON, GENRE_LABEL, SAVES_FN, SAVES_ANON } from './config.js';
 import { el, initTopbar, avatar, channelHref, resolveGameSrc, isStorageGame, requireLogin, loadingEl, emptyEl } from './ui.js';
 
 const app = document.getElementById('app');
@@ -67,6 +67,8 @@ function render() {
   } else {
     player.append(emptyEl('Источник игры не разрешён'));
   }
+  // Кнопка «на весь экран» — для горизонтальных игр (десктоп).
+  if (src && g.orientation === 'landscape') addFullscreenButton(player);
   app.append(player);
 
   // Тайтл + счёт из игры
@@ -200,6 +202,22 @@ function toast(text) {
   setTimeout(() => t.remove(), 1800);
 }
 
+/* ── Полноэкранный режим ── */
+
+function addFullscreenButton(player) {
+  const btn = el('button', { class: 'fs-btn', title: 'На весь экран', 'aria-label': 'На весь экран' }, '⛶');
+  btn.addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else (player.requestFullscreen ? player.requestFullscreen() : Promise.reject()).catch(() => {});
+  });
+  document.addEventListener('fullscreenchange', () => {
+    const on = document.fullscreenElement === player;
+    btn.textContent = on ? '🗗' : '⛶';
+    btn.title = on ? 'Свернуть' : 'На весь экран';
+  });
+  player.append(btn);
+}
+
 /* ── Сообщения от игры (protocol Sharky) ── */
 
 function onGameMessage(e) {
@@ -211,8 +229,60 @@ function onGameMessage(e) {
   } else if (d.type === 'score' || d.type === 'gameover') {
     const s = document.getElementById('gScore');
     if (s && typeof d.value === 'number') s.textContent = `· ${d.value} ${D.game.score_label || ''}`;
+  } else if (d.type === 'sharky-progress-load') {
+    // Игра просит облачный прогресс — читаем из отдельного проекта сейвов.
+    saveApi('load')
+      .then((r) => postToGame({ type: 'sharky-progress', data: r && r.data ? r.data : null, guest: !!(r && r.guest) }))
+      .catch((err) => { console.error('progress load:', err.message); postToGame({ type: 'sharky-progress', data: null }); });
+  } else if (d.type === 'sharky-progress-save') {
+    if (d.data && typeof d.data === 'object') queueSave(d.data);
   }
 }
+
+function postToGame(msg) {
+  if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage(msg, '*');
+}
+
+/* ── Облачные сейвы (отдельный проект Supabase) ──
+   Личность игрока проверяет edge-функция по access-token основного проекта. ── */
+
+let savesToken = null; // кэш токена для keepalive-сейва на закрытии вкладки
+
+async function saveApi(action, data) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return { guest: true }; // гость не сохраняется (нет личности)
+  savesToken = session.access_token;
+  const res = await fetch(SAVES_FN, {
+    method: 'POST',
+    headers: { apikey: SAVES_ANON, Authorization: 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ game_id: gameId, action, data }),
+  });
+  if (!res.ok) throw new Error('saves ' + res.status);
+  return res.json();
+}
+
+let saveTimer = null;
+let pendingSave = null;
+function queueSave(data) {
+  pendingSave = data;
+  if (saveTimer) return;
+  saveTimer = setTimeout(async () => {
+    saveTimer = null;
+    const d = pendingSave; pendingSave = null;
+    try { await saveApi('save', d); } catch (err) { console.error('progress save:', err.message); }
+  }, 1500);
+}
+
+// Не потерять последний сейв при закрытии вкладки.
+window.addEventListener('pagehide', () => {
+  if (!pendingSave || !savesToken) return;
+  const d = pendingSave; pendingSave = null;
+  fetch(SAVES_FN, {
+    method: 'POST', keepalive: true,
+    headers: { apikey: SAVES_ANON, Authorization: 'Bearer ' + savesToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ game_id: gameId, action: 'save', data: d }),
+  }).catch(() => {});
+});
 
 /* ── Комментарии ── */
 
