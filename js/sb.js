@@ -1,6 +1,6 @@
 // Supabase-клиент + сессия + профиль. Один на все страницы.
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { SUPABASE_URL, SUPABASE_ANON } from './config.js';
+import { SUPABASE_URL, SUPABASE_ANON, TG_BOT_ID } from './config.js';
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
 
@@ -58,6 +58,43 @@ const fnCall = (fn, payload) =>
     return r.json();
   });
 
+// Основной путь Telegram-входа: официальный Login Widget (как на большинстве
+// сайтов). Не запускает бота и надёжно работает в вебе, где deep-link Telegram
+// сломан (не доставляет start-payload для уже начатого чата, особенно в Web).
+// Телефон Telegram спрашивает 1 раз на браузер (не на сайт) и сайту не отдаёт.
+// Домен страницы обязан совпадать с @BotFather /setdomain (vgametikok.github.io);
+// на localhost попап выдаст «Bot domain invalid» — проверять только на проде.
+let _tgWidgetP = null;
+function loadTgWidget() {
+  if (window.Telegram?.Login?.auth) return Promise.resolve();
+  if (_tgWidgetP) return _tgWidgetP;
+  _tgWidgetP = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://telegram.org/js/telegram-widget.js?22';
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => { _tgWidgetP = null; reject(new Error('не удалось загрузить Telegram-виджет')); };
+    document.head.appendChild(s);
+  });
+  return _tgWidgetP;
+}
+
+export async function tgWidgetLogin() {
+  await loadTgWidget();
+  if (!window.Telegram?.Login?.auth) throw new Error('Telegram-виджет недоступен');
+  const user = await new Promise((resolve, reject) => {
+    window.Telegram.Login.auth({ bot_id: TG_BOT_ID, request_access: 'write' }, (data) => {
+      if (!data) reject(new Error('вход через Telegram отменён'));
+      else resolve(data);          // {id,first_name,last_name,username,photo_url,auth_date,hash}
+    });
+  });
+  const { token_hash } = await fnCall('tg-auth', { mode: 'widget', widget: user });
+  const { error } = await sb.auth.verifyOtp({ token_hash, type: 'email' });
+  if (error) throw error;
+  location.reload();
+}
+
+// Запасной путь для мобильного приложения Telegram (deep-link бота).
 export async function tgTokenLogin(onStatus) {
   const { token, link } = await fnCall('tg-login', { action: 'new' });
   window.open(link, '_blank', 'noopener');

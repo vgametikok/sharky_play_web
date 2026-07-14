@@ -9,6 +9,8 @@ export const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 // Для работы виджета у @BotFather должен быть выполнен /setdomain
 // на домен сайта: vgametikok.github.io
 export const TG_BOT = 'sharkyplay_bot';
+// Числовой id бота (часть токена до двоеточия) — обязателен для Telegram.Login.auth.
+export const TG_BOT_ID = 8642379598;
 
 // Игры с относительным src лежат в репозитории мобильной ленты.
 export const GAMES_BASE = 'https://vgametikok.github.io/sharky_play/';

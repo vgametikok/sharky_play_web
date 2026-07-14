@@ -1,7 +1,7 @@
 // Общие UI-компоненты: DOM-хелпер, топбар, карточка игры, чипы, логин-модалка.
 // БЕЗОПАСНОСТЬ: весь пользовательский контент попадает в DOM только через
 // textContent (el-хелпер) — никакого innerHTML с данными из БД.
-import { getMe, login, logout, tgTokenLogin, fmt } from './sb.js';
+import { getMe, login, logout, tgWidgetLogin, fmt } from './sb.js';
 import { GAMES_BASE, ALLOWED_GAME_ORIGINS, SUPABASE_URL } from './config.js';
 
 export function el(tag, attrs = {}, ...children) {
@@ -133,23 +133,22 @@ export function chipBar(items, active, onPick) {
 
 export function showLoginModal() {
   if (document.querySelector('.modal-back')) return;
-  // Вход через Telegram БЕЗ телефона: deep-link t.me/бот?start=<токен> —
-  // открывается приложение/веб Telegram, пользователь жмёт Start, сайт
-  // поллит подтверждение (tgTokenLogin) и сам завершает вход.
+  // Вход через Telegram: официальный Login Widget (как на большинстве сайтов) —
+  // всплывает окно подтверждения Telegram, никакого запуска бота. Deep-link
+  // Telegram в вебе сломан (не доставляет start-payload), поэтому используем виджет.
   const hint = el('p', {}, 'Один аккаунт для сайта и Telegram: лайки, подписки, комментарии и история игр.');
   const tgBtn = el('button', {
     class: 'btn btn-tg',
     onclick: async () => {
       tgBtn.disabled = true;
       tgBtn.textContent = 'Подтвердите вход в Telegram…';
-      hint.textContent = 'Открылся Telegram? Нажмите Start у бота — вход завершится сам.';
       try {
-        await tgTokenLogin();
+        await tgWidgetLogin();
       } catch (err) {
-        console.error('tgTokenLogin:', err);
+        console.error('tgWidgetLogin:', err);
         tgBtn.disabled = false;
         tgBtn.textContent = 'Войти через Telegram';
-        hint.textContent = 'Не получилось. Откройте Telegram и попробуйте ещё раз.';
+        hint.textContent = 'Не получилось войти через Telegram. Попробуйте ещё раз или войдите через Google.';
       }
     },
   }, 'Войти через Telegram');
