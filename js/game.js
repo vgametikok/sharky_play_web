@@ -47,7 +47,10 @@ function render() {
   // Storage-игры — fetch + srcdoc (Storage отдаёт .html как text/plain);
   // srcdoc наследует CSP этой страницы, поэтому game.html разрешает
   // 'unsafe-inline' в script-src (инлайн-скрипты самих игр).
-  const src = resolveGameSrc(g.src);
+  const src0 = resolveGameSrc(g.src);
+  // Cache-busting по версии игры (games.version из web_game): после обновления
+  // игроки получают свежий файл, а не закешированный HTTP-кешем старый.
+  const src = src0 ? src0 + (src0.includes('?') ? '&' : '?') + 'v=' + (g.version || 1) : src0;
   const player = el('div', { class: 'player ' + (g.orientation === 'landscape' ? 'landscape' : 'portrait') });
   if (src) {
     iframe = el('iframe', { sandbox: 'allow-scripts', allow: 'autoplay', title: g.title });
