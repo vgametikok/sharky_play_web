@@ -51,7 +51,20 @@ function render() {
   // Cache-busting по версии игры (games.version из web_game): после обновления
   // игроки получают свежий файл, а не закешированный HTTP-кешем старый.
   const src = src0 ? src0 + (src0.includes('?') ? '&' : '?') + 'v=' + (g.version || 1) : src0;
-  const player = el('div', { class: 'player ' + (g.orientation === 'landscape' ? 'landscape' : 'portrait') });
+  // Эффективная ориентация плеера: на широком экране игра может просить
+  // landscape через games.desktop_orientation (мобильная лента и узкие
+  // вьюпорты остаются на orientation). Брейкпоинт = адаптиву сайта (720px).
+  const wideMq = window.matchMedia('(min-width: 721px)');
+  const effOrient = () => {
+    const base = g.orientation === 'landscape' ? 'landscape' : 'portrait';
+    return (wideMq.matches && g.desktop_orientation) ? g.desktop_orientation : base;
+  };
+  const player = el('div', { class: 'player ' + effOrient() });
+  // и mq.change, и window.resize: некоторые встраиваемые браузеры/эмуляции
+  // вьюпорта не шлют события MediaQueryList
+  const onMq = () => { const c = 'player ' + effOrient(); if (player.className !== c) player.className = c; };
+  if (wideMq.addEventListener) wideMq.addEventListener('change', onMq);
+  window.addEventListener('resize', onMq);
   if (src) {
     iframe = el('iframe', { sandbox: 'allow-scripts', allow: 'autoplay', title: g.title });
     player.append(iframe);
@@ -71,7 +84,9 @@ function render() {
     player.append(emptyEl('Источник игры не разрешён'));
   }
   // Кнопка «на весь экран» — для горизонтальных игр (десктоп).
-  if (src && g.orientation === 'landscape') addFullscreenButton(player);
+  // В портретном режиме её прячет CSS (.player.portrait .fs-btn).
+  if (src && (g.orientation === 'landscape' || g.desktop_orientation === 'landscape'))
+    addFullscreenButton(player);
   app.append(player);
 
   // Тайтл + счёт из игры

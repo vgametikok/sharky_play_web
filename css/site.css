@@ -226,6 +226,7 @@ main { max-width: 1440px; margin: 0 auto; padding: 10px 26px 70px; }
 }
 .player:fullscreen iframe { width: 100%; height: 100%; }
 .player.portrait { height: min(78vh, 740px); background: radial-gradient(ellipse at center, #131316 0%, #000 75%); }
+.player.portrait .fs-btn { display: none; }
 .player.portrait iframe { height: 100%; aspect-ratio: 9/16; box-shadow: 0 0 50px rgba(0, 0, 0, .8); }
 .g-title { font-size: 21px; font-weight: 700; letter-spacing: -.01em; margin: 15px 2px 11px; }
 .g-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding-bottom: 8px; }
