@@ -2,7 +2,7 @@
 // описание, комментарии, учёт игрового времени в game_stats.
 import { sb, getMe, fmt, fmtDate } from './sb.js';
 import { SUPABASE_URL, SUPABASE_ANON, GENRE_LABEL, SAVES_FN, SAVES_ANON } from './config.js';
-import { el, initTopbar, avatar, channelHref, resolveGameSrc, isStorageGame, requireLogin, loadingEl, emptyEl } from './ui.js';
+import { el, initShell, avatar, channelHref, resolveGameSrc, isStorageGame, requireLogin, loadingEl, emptyEl } from './ui.js';
 
 const app = document.getElementById('app');
 const params = new URLSearchParams(location.search);
@@ -10,13 +10,13 @@ const gameId = params.get('id') || '';
 
 // Провенанс показа: какая секция сайта привела к запуску (для recsys/A/B).
 // Белый список — произвольные значения из URL в БД не попадают.
-const FEED_SOURCES = {
-  feed: 'web_feed', popular: 'web_popular', fresh: 'web_fresh',
-  continue: 'web_continue', search: 'web_search', channel: 'web_channel',
-};
-const FEED_SOURCE = FEED_SOURCES[params.get('from')] || 'web_game';
+const FEED_SOURCES = [
+  'web_feed', 'web_popular', 'web_fresh', 'web_continue', 'web_search',
+  'web_channel', 'web_vshelf', 'web_top', 'web_saves', 'web_history',
+];
+const FEED_SOURCE = FEED_SOURCES.includes(params.get('from')) ? params.get('from') : 'web_game';
 
-initTopbar();
+initShell(null); // не await: авторизация в топбаре не блокирует загрузку игры
 load();
 
 let D = null; // payload web_game

@@ -37,3 +37,14 @@ export const GENRES = [
   ['other', 'Другое'],
 ];
 export const GENRE_LABEL = Object.fromEntries(GENRES);
+
+// Сеттинг игры (games.setting) — вторая часть меты на карточке.
+export const SETTING_LABEL = {
+  abstract: 'Абстракция', space: 'Космос', nature: 'Природа',
+  city: 'Город', retro: 'Ретро', other: 'Мир',
+};
+
+// Периоды фильтра публикации (совпадают с p_period в web_feed/web_search_v2).
+export const PERIODS = [
+  ['week', 'Неделя'], ['month', 'Месяц'], ['year', 'Год'], ['all', 'Всё время'],
+];

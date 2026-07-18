@@ -3,18 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://telegram.org; connect-src 'self' https://safjqsofdrxdmvnfgvjf.supabase.co https://vgametikok.github.io; img-src https: data:; style-src 'self' 'unsafe-inline'; frame-src https://vgametikok.github.io https://safjqsofdrxdmvnfgvjf.supabase.co https://oauth.telegram.org; base-uri 'none'; object-src 'none'; form-action 'self'">
-<meta name="description" content="Sharky — платформа HTML мини-игр. Играйте мгновенно, без установки.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://telegram.org; connect-src 'self' https://safjqsofdrxdmvnfgvjf.supabase.co https://vgametikok.github.io; img-src https: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https://vgametikok.github.io https://safjqsofdrxdmvnfgvjf.supabase.co https://oauth.telegram.org; base-uri 'none'; object-src 'none'; form-action 'self'">
+<meta name="description" content="Sharky — короткие браузерные мини-игры. Играйте мгновенно, без установки.">
 <title>Sharky — мини-игры онлайн</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦈</text></svg>">
 <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
-<header id="topbar"></header>
-<main>
-  <div id="chips"></div>
-  <div id="sections"></div>
-</main>
+<aside id="sidebar"></aside>
+<div class="shell">
+  <header id="topbar"></header>
+  <main id="app">
+    <div id="filterRow" class="filter-row"></div>
+    <section id="secV"></section>
+    <section id="secH"></section>
+    <div id="sentinel" style="height:1px"></div>
+  </main>
+  <footer id="footer"></footer>
+</div>
 <script type="module" src="js/home.js"></script>
 </body>
 </html>
