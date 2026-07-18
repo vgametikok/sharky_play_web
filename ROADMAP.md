@@ -160,12 +160,18 @@ Google-вход → провижн `users`. `app_opens.platform='web'` + веб-
 5. История: рабочая «Показать ещё» (offset в RPC давно есть).
 6. Фиксы: web_channel error проглатывается (выглядит как «нет игр»); skeletons.
 
-**К2 — малый бэкенд (после К1):**
-1. `web_me()` / расширить web_ensure_user: + has_telegram (telegram_id не в грантах — без RPC статус не показать).
-2. **tg-auth mode:'link'** (спека уже в §2): виджет + JWT → telegram_id на текущую строку; 409 если занят.
-3. Приватность saves: закрыть public-read SELECT → self-only. СНАЧАЛА проверить, что TG-лента
-   не читает saves клиентски (счётчики идут через definer web_game — скорее всего безопасно).
-4. «Подписки»: web_my_follows() + web_follow_feed() — «новое от ваших авторов» (retention-петля).
+**К2 — ГОТОВО (2026-07-18):**
+1. ✅ `web_me()` → {id, username, has_telegram} (миграция k2_me_follows_saves).
+2. ✅ **tg-auth v8 mode:'link'**: виджет + JWT → telegram_id на строку по auth_uid; 409 при конфликте
+   (у строки другой TG / TG занят другой строкой; слияние аккаунтов — пост-MVP).
+   ПОПУТНО КРИТИЧЕСКИЙ ФИКС: логин-режимы больше НЕ перезаписывают auth_uid привязанной строки —
+   сессия выдаётся на существующую идентичность (email auth-юзера из users.auth_uid). Без этого
+   первый TG-вход после привязки Google↔TG отвязывал бы Google (app_uid() терял строку).
+3. ✅ saves: public-read снят → политика "read own saves" (обе поверхности читают только своё —
+   проверено; счётчики через definer web_game не задеты).
+4. ✅ web_my_follows() + web_follow_feed(p_limit,p_offset); секции «АККАУНТ» и «ПОДПИСКИ» в me.js,
+   провенанс 'web_follows' в whitelist game.js. Кнопка «Привязать Telegram» работает только на
+   проде (@BotFather /setdomain = vgametikok.github.io; на localhost виджет даёт Bot domain invalid).
 
 **К3 — creator-дашборд (когда появятся живые авторы):**
 - ФАКТ: все 40 игр принадлежат виртуальным авторам без auth_uid → web_my_games() сегодня пуст для всех.

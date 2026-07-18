@@ -12,7 +12,7 @@ const gameId = params.get('id') || '';
 // Белый список — произвольные значения из URL в БД не попадают.
 const FEED_SOURCES = [
   'web_feed', 'web_popular', 'web_fresh', 'web_continue', 'web_search',
-  'web_channel', 'web_vshelf', 'web_top', 'web_saves', 'web_history',
+  'web_channel', 'web_vshelf', 'web_top', 'web_saves', 'web_history', 'web_follows',
 ];
 const FEED_SOURCE = FEED_SOURCES.includes(params.get('from')) ? params.get('from') : 'web_game';
 

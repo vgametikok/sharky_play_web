@@ -1,6 +1,6 @@
 // Личный кабинет (ArcadeBox): герой профиля, редактор канала (с градиентом),
 // сохранённые игры, мои игры, история игр с пагинацией.
-import { sb, getMe, fmt, fmtDate } from './sb.js';
+import { sb, getMe, fmt, fmtDate, tgWidgetLink } from './sb.js';
 import {
   el, initShell, showLoginModal, avatar, channelHref, gameHref,
   gameCardH, safeColor, safeGradient, loadingEl, emptyEl,
@@ -44,7 +44,9 @@ async function init() {
   editorPanel = renderEditor(me, hero);
   app.append(hero, editorPanel);
   // Секции стартуют параллельно: каждая синхронно вставляет свою панель со скелетоном.
+  renderAccount();
   renderSaved(me);
+  renderFollows(me);
   renderMyGames(me);
   renderHistory();
 }
@@ -143,6 +145,128 @@ function renderEditor(me, hero) {
     el('div', { style: { marginTop: '6px' } }, saveBtn, status));
   updPreview();
   return panel;
+}
+
+/* ── Аккаунт: способ входа + привязка Telegram (К2) ── */
+
+async function renderAccount() {
+  const section = el('section', { class: 'panel' },
+    el('h2', {}, 'АККАУНТ'), loadingEl());
+  app.append(section);
+
+  const [{ data: { session } }, meResp] = await Promise.all([
+    sb.auth.getSession(),
+    sb.rpc('web_me'),
+  ]);
+  section.querySelector('.loading').remove();
+  if (meResp.error || !meResp.data) {
+    console.error('web_me:', meResp.error && meResp.error.message);
+    section.append(emptyEl('Не удалось загрузить данные аккаунта'));
+    return;
+  }
+  const email = session?.user?.email || '';
+  const isTgEmail = /@sharky\.telegram$/i.test(email);
+  const rows = el('div', {});
+  section.append(rows);
+
+  const line = (label, value) => el('div', { class: 'hist-item' },
+    el('div', { class: 'hist-info' },
+      el('div', { class: 'hist-title' }, label),
+      el('div', { class: 'hist-meta' }, value)));
+
+  rows.append(line('Вход', isTgEmail ? 'через Telegram' : email || '—'));
+
+  function renderTgRow(hasTg) {
+    const existing = rows.querySelector('[data-tg-row]');
+    if (existing) existing.remove();
+    const row = el('div', { class: 'hist-item', 'data-tg-row': '1' },
+      el('div', { class: 'hist-info' },
+        el('div', { class: 'hist-title' }, 'Telegram'),
+        el('div', { class: 'hist-meta' }, hasTg
+          ? 'привязан — лайки и история общие с мини-аппом'
+          : 'не привязан')));
+    if (!hasTg && !isTgEmail) {
+      const status = el('span', { class: 'hist-meta', style: { marginLeft: '10px' } });
+      const btn = el('button', {
+        class: 'btn', style: { marginLeft: 'auto' },
+        onclick: async () => {
+          btn.disabled = true;
+          status.textContent = 'Подтвердите в Telegram…';
+          try {
+            await tgWidgetLink();
+            renderTgRow(true);
+          } catch (err) {
+            console.error('tgWidgetLink:', err);
+            btn.disabled = false;
+            status.textContent = err.message === 'conflict'
+              ? 'Этот Telegram уже привязан к другому аккаунту'
+              : 'Не получилось. Попробуйте ещё раз';
+          }
+        },
+      }, 'Привязать Telegram');
+      row.append(btn, status);
+    } else if (hasTg) {
+      row.append(el('span', { style: { marginLeft: 'auto', color: 'var(--ab)', fontFamily: 'var(--mono)', fontSize: '12px' } }, '✓'));
+    }
+    rows.append(row);
+  }
+  renderTgRow(!!meResp.data.has_telegram);
+}
+
+/* ── Подписки: каналы + новое от ваших авторов (К2) ── */
+
+async function renderFollows(me) {
+  const section = el('section', { class: 'panel' },
+    el('h2', {}, 'ПОДПИСКИ'), loadingEl());
+  app.append(section);
+  const [flResp, feedResp] = await Promise.all([
+    sb.rpc('web_my_follows'),
+    sb.rpc('web_follow_feed', { p_limit: 12, p_offset: 0 }),
+  ]);
+  section.querySelector('.loading').remove();
+  if (flResp.error) {
+    console.error('web_my_follows:', flResp.error.message);
+    section.append(emptyEl('Не удалось загрузить подписки'));
+    return;
+  }
+  const follows = flResp.data || [];
+  if (!follows.length) {
+    section.append(emptyEl('Вы пока ни на кого не подписаны. Кнопка «Подписаться» — на странице любой игры.'));
+    return;
+  }
+  const list = el('div', {});
+  for (const f of follows) {
+    const row = el('div', { class: 'hist-item' });
+    const avLink = el('a', { href: channelHref(f.username) });
+    avLink.append(avatar(f, 44));
+    row.append(
+      avLink,
+      el('div', { class: 'hist-info' },
+        el('a', { class: 'hist-title', href: channelHref(f.username) }, f.display_name || f.username),
+        el('div', { class: 'hist-meta' }, `${fmt(f.games_count)} игр · с ${fmtDate(f.followed_at)}`)),
+      el('button', {
+        class: 'btn btn-ghost', style: { marginLeft: 'auto' },
+        onclick: async (e) => {
+          const btn = e.currentTarget;
+          btn.disabled = true;
+          const { error } = await sb.from('follows')
+            .delete().match({ follower_id: me.id, followee_username: f.username });
+          if (error) { btn.disabled = false; return; }
+          row.remove();
+        },
+      }, 'Отписаться'));
+    list.append(row);
+  }
+  section.append(list);
+
+  // Свежие игры каналов из подписок — retention-петля «новое от ваших авторов».
+  const feed = (!feedResp.error && feedResp.data) || [];
+  if (feed.length) {
+    section.append(
+      el('h2', { style: { marginTop: '22px' } }, 'НОВОЕ ОТ ВАШИХ АВТОРОВ'),
+      el('div', { class: 'ggrid', style: { marginTop: '4px' } },
+        feed.map((g) => gameCardH(g, 'web_follows'))));
+  }
 }
 
 /* ── Миниатюра строки (сохранённые + история) ── */

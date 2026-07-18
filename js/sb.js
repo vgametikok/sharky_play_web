@@ -94,6 +94,36 @@ export async function tgWidgetLogin() {
   location.reload();
 }
 
+// ПРИВЯЗКА Telegram к текущему (уже залогиненному) аккаунту — НЕ вход.
+// Виджет подтверждает владение TG-аккаунтом, JWT — владение текущей сессией;
+// tg-auth mode:'link' прикрепляет telegram_id к строке users по auth_uid.
+// Кидает Error('conflict'), если этот Telegram занят другим аккаунтом.
+export async function tgWidgetLink() {
+  await loadTgWidget();
+  if (!window.Telegram?.Login?.auth) throw new Error('Telegram-виджет недоступен');
+  const user = await new Promise((resolve, reject) => {
+    window.Telegram.Login.auth({ bot_id: TG_BOT_ID, request_access: 'write' }, (data) => {
+      if (!data) reject(new Error('привязка отменена'));
+      else resolve(data);
+    });
+  });
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) throw new Error('нет сессии — войдите заново');
+  const r = await fetch(`${SUPABASE_URL}/functions/v1/tg-auth`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: SUPABASE_ANON,
+      Authorization: 'Bearer ' + session.access_token,
+    },
+    body: JSON.stringify({ mode: 'link', widget: user }),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 409) throw new Error('conflict');
+  if (!r.ok) throw new Error(j.error || ('tg-auth ' + r.status));
+  return j;
+}
+
 // Запасной путь для мобильного приложения Telegram (deep-link бота).
 export async function tgTokenLogin(onStatus) {
   const { token, link } = await fnCall('tg-login', { action: 'new' });
