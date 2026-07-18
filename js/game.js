@@ -83,9 +83,9 @@ function render() {
   } else {
     player.append(emptyEl('Источник игры не разрешён'));
   }
-  // Кнопка «на весь экран» — для горизонтальных игр (десктоп).
-  // В портретном режиме её прячет CSS (.player.portrait .fs-btn).
-  if (src && (g.orientation === 'landscape' || g.desktop_orientation === 'landscape'))
+  // Кнопка «на весь экран» — для всех игр (вертикальные в фулскрине
+  // центрируются пилларбоксом 9:16). iOS Safari без Fullscreen API — не рисуем.
+  if (src && document.fullscreenEnabled !== false)
     addFullscreenButton(player);
   app.append(player);
 
