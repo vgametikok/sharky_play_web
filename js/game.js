@@ -242,8 +242,11 @@ function onGameMessage(e) {
   if (!iframe || e.source !== iframe.contentWindow) return;
   const d = e.data || {};
   if (d.type === 'ready') {
-    iframe.contentWindow.postMessage({ type: 'init', accent: D.game.accent, bg: D.game.bg }, '*');
-    iframe.contentWindow.postMessage({ type: 'start' }, '*');
+    // targetOrigin 'null': игровой iframe в sandbox без allow-same-origin имеет
+    // opaque origin, поэтому сообщения (в т.ч. облачный сейв) не утекут, если
+    // фрейм когда-либо перейдёт на реальный origin.
+    iframe.contentWindow.postMessage({ type: 'init', accent: D.game.accent, bg: D.game.bg }, 'null');
+    iframe.contentWindow.postMessage({ type: 'start' }, 'null');
   } else if (d.type === 'score' || d.type === 'gameover') {
     const s = document.getElementById('gScore');
     if (s && typeof d.value === 'number') s.textContent = `· ${d.value} ${D.game.score_label || ''}`;
@@ -258,7 +261,9 @@ function onGameMessage(e) {
 }
 
 function postToGame(msg) {
-  if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage(msg, '*');
+  // targetOrigin 'null' — фрейм игры имеет opaque origin (sandbox без
+  // allow-same-origin), сейв не уйдёт «наружу» при навигации фрейма.
+  if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage(msg, 'null');
 }
 
 /* ── Облачные сейвы (отдельный проект Supabase) ──
