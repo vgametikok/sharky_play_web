@@ -3,7 +3,7 @@
 // БЕЗОПАСНОСТЬ: весь пользовательский контент попадает в DOM только через
 // textContent (el-хелпер) — никакого innerHTML с данными из БД.
 import { getMe, login, logout, tgWidgetLogin, fmt } from './sb.js';
-import { GAMES_BASE, ALLOWED_GAME_ORIGINS, SUPABASE_URL, GENRES, GENRE_LABEL, SETTING_LABEL, PERIODS } from './config.js';
+import { GAMES_BASE, ALLOWED_GAME_ORIGINS, SUPABASE_URL, MAKER_URL, GENRES, GENRE_LABEL, SETTING_LABEL, PERIODS } from './config.js';
 
 export function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -116,8 +116,12 @@ export async function initShell(active) {
   if (auth) {
     const me = await getMe();
     if (!me) {
-      auth.append(el('button', { class: 'btn-login', onclick: showLoginModal }, 'Войти'));
+      // Кнопка есть и у гостя: по клику — сначала регистрация/вход.
+      auth.append(
+        el('button', { class: 'btn tb-create', onclick: showLoginModal }, 'Создать игру +'),
+        el('button', { class: 'btn-login', onclick: showLoginModal }, 'Войти'));
     } else {
+      auth.append(el('a', { class: 'btn tb-create', href: MAKER_URL, target: '_blank', rel: 'noopener' }, 'Создать игру +'));
       const menu = el('div', { class: 'tb-menu hidden' },
         el('a', { href: channelHref(me.username) }, 'Мой канал'),
         el('a', { href: 'me.html' }, 'Личный кабинет'),

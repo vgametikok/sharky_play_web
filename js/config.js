@@ -15,6 +15,9 @@ export const TG_BOT_ID = 8642379598;
 // Игры с относительным src лежат в репозитории мобильной ленты.
 export const GAMES_BASE = 'https://vgametikok.github.io/sharky_play/';
 
+// Sharky Maker — сервис генерации игр (тот же Supabase → тот же аккаунт).
+export const MAKER_URL = 'https://vgametikok.github.io/sharky_ai_game_engine/';
+
 // Белый список источников, откуда разрешено грузить игры в iframe
 // (дублирует frame-src в CSP — защита в глубину).
 export const ALLOWED_GAME_ORIGINS = [

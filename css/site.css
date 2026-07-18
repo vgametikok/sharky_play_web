@@ -494,6 +494,7 @@ main { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 40px 40px
   .featured .thumb { width: 100%; }
 }
 @media (max-width: 640px) {
+  .tb-create { padding: 8px 10px; letter-spacing: .04em; }
   .ggrid { grid-template-columns: 1fr; }
   .grid { grid-template-columns: 1fr 1fr; gap: 16px 12px; }
   .player.portrait { height: 68vh; }
