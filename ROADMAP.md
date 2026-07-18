@@ -131,3 +131,54 @@ Google-вход → провижн `users`. `app_opens.platform='web'` + веб-
 - [ ] Дуэлл-время игр с сайта пишется в `game_stats` (`feed_source` с web-префиксом).
 - [ ] Личный кабинет: правка своего канала и своих игр (scoped), история сыгранного.
 - [ ] Тот же аккаунт виден и на сайте, и в мобильной ленте (общие подписки/лайки).
+
+---
+
+## 8. Редизайн v2 (тёмная тема, 2026-07-18) — поиск и личный кабинет
+
+Синтез аудита кода + БД и трёх независимых проработок (player-first / creator-first / minimal).
+Модель данных: `games.display_orientation` (vertical|horizontal|vnh) — источник истины,
+триггер выводит orientation (TG) и desktop_orientation (плеер сайта). RPC: `web_feed` (главная), `web_search_v2` (поиск).
+
+### 8.1 Поиск — бэкенд ГОТОВ, вёрстка при редизайне
+- **`web_search_v2(p_q,p_genre,p_period,p_limit,p_offset)` → jsonb {total, cards}** (задеплоен, проверен).
+  Ранжирование: точное название 100 > префикс 60 > все слова в title+description 40 (+similarity*30, pg_trgm
+  установлен в schema extensions — опечатки ловятся, кириллица ок). q='' = каталог по свежести.
+- Вёрстка (по дизайну): единая смешанная masonry-выдача (светлый референс — раскладка), «Найдено N» из total,
+  фильтры жанр+период В URL (сейчас теряются при перезагрузке), skeletonCards вместо loadingEl.
+- Фиксы старых багов при переписывании search.js: append-ошибка стирает уже загруженную выдачу;
+  «Показать ещё» при кратном 24 — мёртвый клик (сравнивать offset+len с total).
+
+### 8.2 Личный кабинет — три очереди
+
+**К1 — вместе с редизайном, ноль нового бэкенда:**
+1. Гейт входа → общий showLoginModal (Google+TG; сейчас Google-only — TG-юзеры отрезаны).
+2. Шапка-превью канала: banner/градиент-фолбэк, счётчики, «Открыть канал»; редактор в drawer
+   (+ поле gradient — колонка уже writable, UI просто не было; живое превью баннера).
+3. «Продолжить играть» — rail из web_play_history(8) вверху. Главный daily-хук.
+4. «Сохранённые» — НОВАЯ секция: PostgREST-embed saves→games (оба FK подтверждены), toggle-удаление.
+5. История: рабочая «Показать ещё» (offset в RPC давно есть).
+6. Фиксы: web_channel error проглатывается (выглядит как «нет игр»); skeletons.
+
+**К2 — малый бэкенд (после К1):**
+1. `web_me()` / расширить web_ensure_user: + has_telegram (telegram_id не в грантах — без RPC статус не показать).
+2. **tg-auth mode:'link'** (спека уже в §2): виджет + JWT → telegram_id на текущую строку; 409 если занят.
+3. Приватность saves: закрыть public-read SELECT → self-only. СНАЧАЛА проверить, что TG-лента
+   не читает saves клиентски (счётчики идут через definer web_game — скорее всего безопасно).
+4. «Подписки»: web_my_follows() + web_follow_feed() — «новое от ваших авторов» (retention-петля).
+
+**К3 — creator-дашборд (когда появятся живые авторы):**
+- ФАКТ: все 40 игр принадлежат виртуальным авторам без auth_uid → web_my_games() сегодня пуст для всех.
+  Сначала claim-флоу (admin_update_user привязывает auth_uid к автору), потом дашборд.
+- `web_my_games()` (все статусы, не только published) + `web_update_my_game(id, patch)` — DEFINER RPC
+  с whitelist полей (title/description/genre/emoji/bg/accent/display_orientation/thumbnail_url/status),
+  НИКОГДА src/version/author_id. Именно RPC, не RLS-политика: UPDATE-грант на games табличный,
+  политика дала бы автору переписать src.
+- Мини-статистика per-game: web_my_game_daily (scoped-клон admin_games_timeseries).
+- Пайплайн заявок game_submissions (модерация вручную) — отдельная ставка, не раньше 1-2 внешних авторов.
+
+### 8.3 Проверенные факты (2026-07-18, чтобы не перепроверять)
+- app_uid() = users.id по auth_uid — ЕДИНЫЙ для сайта и TG (4 юзера с обеими привязками).
+  Один легаси-юзер: telegram_id без auth_uid — его записи невидимы ему под RLS (кандидат на бэкфилл).
+- saves(user_id,game_id,created_at), FK на users и games — embed работает.
+- saves публично читаемы (privacy-утечка) — закрыть в К2.
