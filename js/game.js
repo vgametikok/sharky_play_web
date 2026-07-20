@@ -251,13 +251,25 @@ function onGameMessage(e) {
     const s = document.getElementById('gScore');
     if (s && typeof d.value === 'number') s.textContent = `· ${d.value} ${D.game.score_label || ''}`;
   } else if (d.type === 'sharky-progress-load') {
-    // Игра просит облачный прогресс — читаем из отдельного проекта сейвов.
+    // Облачный прогресс (нужен вход) + локальный фолбэк на этой (НЕ песочной)
+    // странице: гость сохраняется в localStorage родителя — иначе внутри
+    // sandbox-iframe без allow-same-origin у игры localStorage недоступен,
+    // и прогресс терялся при каждой перезагрузке.
     saveApi('load')
-      .then((r) => postToGame({ type: 'sharky-progress', data: r && r.data ? r.data : null, guest: !!(r && r.guest) }))
-      .catch((err) => { console.error('progress load:', err.message); postToGame({ type: 'sharky-progress', data: null }); });
+      .then((r) => postToGame({ type: 'sharky-progress', data: (r && r.data) ? r.data : readLocalSave(), guest: !!(r && r.guest) }))
+      .catch((err) => { console.error('progress load:', err.message); postToGame({ type: 'sharky-progress', data: readLocalSave() }); });
   } else if (d.type === 'sharky-progress-save') {
-    if (d.data && typeof d.data === 'object') queueSave(d.data);
+    if (d.data && typeof d.data === 'object') { writeLocalSave(d.data); queueSave(d.data); }
   }
+}
+
+/* ── Локальный фолбэк сейва (родительская страница, вне sandbox) ── */
+const LOCAL_SAVE_KEY = 'sharky_local_' + gameId;
+function readLocalSave() {
+  try { const raw = localStorage.getItem(LOCAL_SAVE_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+}
+function writeLocalSave(data) {
+  try { localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(data)); } catch (e) {}
 }
 
 function postToGame(msg) {
