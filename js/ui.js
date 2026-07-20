@@ -38,7 +38,7 @@ export const channelHref = (username) => 'channel.html?u=' + encodeURIComponent(
 // Билд плеера: бампить при правках game.html/game.js. Уходит в URL игры (&b=)
 // как кеш-бастер — Pages отдаёт HTML с max-age=600, и без этого переход из
 // каталога 10 минут открывал бы закешированный старый плеер.
-export const PLAYER_BUILD = '3';
+export const PLAYER_BUILD = '4';
 // from — провенанс показа (какая секция привела на игру), уходит в game_stats.feed_source.
 export const gameHref = (id, from) =>
   'game.html?id=' + encodeURIComponent(id || '') + (from ? '&from=' + encodeURIComponent(from) : '') + '&b=' + PLAYER_BUILD;

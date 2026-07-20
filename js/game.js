@@ -21,6 +21,7 @@ load();
 
 let D = null; // payload web_game
 let iframe = null;
+let gamePaused = false;
 
 async function load() {
   app.replaceChildren(loadingEl());
@@ -87,6 +88,7 @@ function render() {
   // центрируются пилларбоксом 9:16). iOS Safari без Fullscreen API — не рисуем.
   if (src && document.fullscreenEnabled !== false)
     addFullscreenButton(player);
+  if (src) addPauseButton(player);
   app.append(player);
 
   // Тайтл + счёт из игры
@@ -232,6 +234,24 @@ function addFullscreenButton(player) {
     const on = document.fullscreenElement === player;
     btn.textContent = on ? '🗗' : '⛶';
     btn.title = on ? 'Свернуть' : 'На весь экран';
+  });
+  player.append(btn);
+}
+
+/* ── Пауза / продолжить ── */
+
+// Шлём игре pause/start по контракту Sharky (тот же, что мобильная лента):
+// игра сама останавливает свои циклы/таймеры. Кнопка живёт в углу плеера
+// рядом с «на весь экран».
+function addPauseButton(player) {
+  gamePaused = false;
+  const btn = el('button', { class: 'pause-btn', title: 'Пауза', 'aria-label': 'Пауза' }, '⏸');
+  btn.addEventListener('click', () => {
+    gamePaused = !gamePaused;
+    postToGame({ type: gamePaused ? 'pause' : 'start' });
+    btn.textContent = gamePaused ? '▶' : '⏸';
+    btn.title = gamePaused ? 'Продолжить' : 'Пауза';
+    btn.classList.toggle('on', gamePaused);
   });
   player.append(btn);
 }
