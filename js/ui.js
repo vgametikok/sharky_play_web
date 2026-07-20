@@ -145,7 +145,32 @@ export async function initShell(active) {
 // Легаси-алиас (страницы до редизайна звали initTopbar).
 export const initTopbar = () => initShell(null);
 
-/* ── Обложка: thumbnail_url или градиент bg→accent + эмодзи + название ── */
+/* ── Обложка: thumbnail_url; иначе градиент+эмодзи, а поверх — ЖИВОЙ первый
+   кадр игры (thumb.html), лениво. Так карточка без обложки показывает саму
+   игру, а не заглушку. Пиксели песочницы родитель прочитать не может, поэтому
+   рисует их сам вложенный iframe; градиент — фон, пока/если кадр не появился. ── */
+const liveThumbObs = ('IntersectionObserver' in window)
+  ? new IntersectionObserver((ents, obs) => {
+      for (const e of ents) {
+        if (!e.isIntersecting) continue;
+        obs.unobserve(e.target);
+        mountLiveThumb(e.target);
+      }
+    }, { rootMargin: '400px' })
+  : null;
+
+function mountLiveThumb(c) {
+  const id = c.dataset.liveId;
+  if (!id || c.querySelector('.gc-live')) return;
+  const fr = el('iframe', {
+    class: 'gc-live', src: 'thumb.html?id=' + encodeURIComponent(id) + '&o=' + (c.dataset.liveO || ''),
+    tabindex: '-1', 'aria-hidden': 'true', scrolling: 'no', loading: 'lazy', title: '',
+    style: { position: 'absolute', inset: '0', width: '100%', height: '100%', border: '0', pointerEvents: 'none', opacity: '0', transition: 'opacity .35s ease' },
+  });
+  fr.addEventListener('load', () => { setTimeout(() => { fr.style.opacity = '1'; }, 500); });
+  c.append(fr);
+}
+
 function cover(g, vert) {
   const c = el('div', { class: 'gc-cover' });
   if (g.thumbnail_url) {
@@ -154,9 +179,16 @@ function cover(g, vert) {
     const dark = safeColor(g.bg) || '#15121c';
     const acc = safeColor(g.accent) || '#3a2b4d';
     c.style.background = `linear-gradient(${vert ? 30 : 65}deg, ${dark} 0%, ${acc} 150%)`;
+    c.style.position = 'relative';
+    c.style.overflow = 'hidden';
     c.append(
       el('div', { class: 'gc-wm' }, g.emoji || '🎮'),
       el('div', { class: 'gc-ttl' }, g.title || ''));
+    if (g.id) {
+      c.dataset.liveId = g.id;
+      c.dataset.liveO = vert ? 'vertical' : 'horizontal';
+      if (liveThumbObs) liveThumbObs.observe(c); else mountLiveThumb(c);
+    }
   }
   return c;
 }
