@@ -242,11 +242,13 @@ function onGameMessage(e) {
   if (!iframe || e.source !== iframe.contentWindow) return;
   const d = e.data || {};
   if (d.type === 'ready') {
-    // targetOrigin 'null': игровой iframe в sandbox без allow-same-origin имеет
-    // opaque origin, поэтому сообщения (в т.ч. облачный сейв) не утекут, если
-    // фрейм когда-либо перейдёт на реальный origin.
-    iframe.contentWindow.postMessage({ type: 'init', accent: D.game.accent, bg: D.game.bg }, 'null');
-    iframe.contentWindow.postMessage({ type: 'start' }, 'null');
+    // targetOrigin '*': игровой iframe в sandbox без allow-same-origin имеет
+    // OPAQUE origin, который сериализуется в "null" — но строка 'null' невалидна
+    // как targetOrigin (postMessage её отвергает), поэтому по origin в такой
+    // фрейм адресоваться нельзя, только '*'. Изоляция обеспечивается самим
+    // sandbox'ом (нет same-origin) + проверкой e.source на приёме.
+    iframe.contentWindow.postMessage({ type: 'init', accent: D.game.accent, bg: D.game.bg }, '*');
+    iframe.contentWindow.postMessage({ type: 'start' }, '*');
   } else if (d.type === 'score' || d.type === 'gameover') {
     const s = document.getElementById('gScore');
     if (s && typeof d.value === 'number') s.textContent = `· ${d.value} ${D.game.score_label || ''}`;
@@ -273,9 +275,9 @@ function writeLocalSave(data) {
 }
 
 function postToGame(msg) {
-  // targetOrigin 'null' — фрейм игры имеет opaque origin (sandbox без
-  // allow-same-origin), сейв не уйдёт «наружу» при навигации фрейма.
-  if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage(msg, 'null');
+  // targetOrigin '*' обязателен: opaque origin sandbox-фрейма как строка ('null')
+  // невалиден для postMessage. Доставляется только текущему содержимому iframe.
+  if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage(msg, '*');
 }
 
 /* ── Облачные сейвы (отдельный проект Supabase) ──
