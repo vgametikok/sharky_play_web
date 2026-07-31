@@ -3,7 +3,7 @@
 // БЕЗОПАСНОСТЬ: весь пользовательский контент попадает в DOM только через
 // textContent (el-хелпер) — никакого innerHTML с данными из БД.
 import { getMe, login, logout, tgWidgetLogin, fmt } from './sb.js';
-import { GAMES_BASE, ALLOWED_GAME_ORIGINS, SUPABASE_URL, MAKER_URL, GENRES, GENRE_LABEL, SETTING_LABEL, PERIODS } from './config.js';
+import { GAMES_BASE, ALLOWED_GAME_ORIGINS, SUPABASE_URL, GENRES, GENRE_LABEL, SETTING_LABEL, PERIODS } from './config.js';
 
 export function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -120,12 +120,12 @@ export async function initShell(active) {
   if (auth) {
     const me = await getMe();
     if (!me) {
-      // Кнопка есть и у гостя: по клику — сначала регистрация/вход.
+      // Кнопка «Создать игру» пока витринная: возможность в разработке.
       auth.append(
-        el('button', { class: 'btn tb-create', onclick: showLoginModal }, 'Создать игру +'),
+        el('button', { class: 'btn tb-create', onclick: () => toast('Скоро добавим эту возможность') }, 'Создать игру +'),
         el('button', { class: 'btn-login', onclick: showLoginModal }, 'Войти'));
     } else {
-      auth.append(el('a', { class: 'btn tb-create', href: MAKER_URL, target: '_blank', rel: 'noopener' }, 'Создать игру +'));
+      auth.append(el('button', { class: 'btn tb-create', onclick: () => toast('Скоро добавим эту возможность') }, 'Создать игру +'));
       const menu = el('div', { class: 'tb-menu hidden' },
         el('a', { href: channelHref(me.username) }, 'Мой канал'),
         el('a', { href: 'me.html' }, 'Личный кабинет'),
@@ -309,6 +309,14 @@ export const loadingEl = () => el('div', { class: 'loading' }, 'Загрузка
 export const emptyEl = (text) => el('div', { class: 'empty' }, text);
 
 /* ── Логин-модалка ── */
+// Короткое всплывающее уведомление внизу экрана (те же стили, что у тоста плеера).
+export function toast(text) {
+  const t = el('div', { class: 'modal-back', style: { background: 'transparent', pointerEvents: 'none', alignItems: 'flex-end', paddingBottom: '40px' } },
+    el('div', { class: 'modal', style: { padding: '12px 24px' } }, text));
+  document.body.append(t);
+  setTimeout(() => t.remove(), 2000);
+}
+
 export function showLoginModal() {
   if (document.querySelector('.modal-back')) return;
   const hint = el('p', {}, 'Один аккаунт для сайта и Telegram: лайки, подписки, комментарии и история игр.');
