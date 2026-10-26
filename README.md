@@ -35,8 +35,8 @@ node serve.js 5080
 
 
 ## Объединение с sharky_play (мобильная версия)
-- `feed.html` + `engine.js` — вертикальная лента (бывший `sharky_play/index.html`). Телефон/узкий экран с `/` уходит в ленту (`js/mobile-redirect.js`), `?catalog=1` — остаться в каталоге.
-- `admin.html` — админка (загрузка .html и .zip-билдов в R2).
-- `games/` — встроенные игры, `privacy.html`, `terms.html`.
-- `supabase/functions/tg-auth`, `supabase/migrations` — серверная часть.
-- `workers/sharky-games` — Worker для многофайловых билдов (R2).
+Сайт остаётся каталогом (YouTube-стиль) на всех экранах; TikTok-ленту не переносили.
+- `admin.html` — админка (загрузка .html и .zip-билдов в R2 через `workers/sharky-games`).
+- `games/` — 40 встроенных игр, `privacy.html`, `terms.html`.
+- `supabase/functions/` — исходники, снятые с задеплоенных версий (2026-10-26): `tg-auth` v8 (initData / widget / logintoken / link), `tg-login` (вебхук бота, подтверждает вход), `game-update` (обновление версии из админки).
+- `supabase/migrations`, `workers/sharky-games`.

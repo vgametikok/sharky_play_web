@@ -1,6 +1,6 @@
 -- После мержа: ничего обновлять в БД НЕ нужно.
 -- 38 встроенных игр хранят ОТНОСИТЕЛЬНЫЙ src 'games/<file>.html':
---   * feed.html (лента) резолвит его относительно своей страницы -> /sharky_play_web/games/...
+--   * admin.html (превью) резолвит его относительно своей страницы -> /sharky_play_web/games/... (файлы теперь здесь)
 --   * сайт (js/ui.js) резолвит через GAMES_BASE в js/config.js (пока старый https://vgametikok.github.io/sharky_play/).
 -- Когда https://vgametikok.github.io/sharky_play_web/games/flappy.html открывается -> поменять GAMES_BASE
 -- на 'https://vgametikok.github.io/sharky_play_web/' (одна строка кода, отдельный коммит).
