@@ -1,7 +1,7 @@
 // Страница игры («watch»): плеер, канал, лайк/дизлайк/избранное/поделиться,
 // описание, комментарии, учёт игрового времени в game_stats.
 import { sb, getMe, fmt, fmtDate } from './sb.js';
-import { SUPABASE_URL, SUPABASE_ANON, GENRE_LABEL, SAVES_FN, SAVES_ANON, GAMES_CDN } from './config.js';
+import { SUPABASE_URL, SUPABASE_ANON, GENRE_LABEL, GAMES_CDN } from './config.js';
 import { el, initShell, avatar, channelHref, resolveGameSrc, isStorageGame, requireLogin, loadingEl, emptyEl } from './ui.js';
 
 const app = document.getElementById('app');
@@ -306,22 +306,26 @@ function postToGame(msg) {
   if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage(msg, '*');
 }
 
-/* ── Облачные сейвы (отдельный проект Supabase) ──
-   Личность игрока проверяет edge-функция по access-token основного проекта. ── */
+/* ── Облачные сейвы: таблица game_progress в основном проекте (RLS по auth.uid()) ── */
 
-let savesToken = null; // кэш токена для keepalive-сейва на закрытии вкладки
+let savesToken = null; // кэш для keepalive-сейва на закрытии вкладки
+let savesUid = null;
 
 async function saveApi(action, data) {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return { guest: true }; // гость не сохраняется (нет личности)
-  savesToken = session.access_token;
-  const res = await fetch(SAVES_FN, {
-    method: 'POST',
-    headers: { apikey: SAVES_ANON, Authorization: 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ game_id: gameId, action, data }),
-  });
-  if (!res.ok) throw new Error('saves ' + res.status);
-  return res.json();
+  savesToken = session.access_token; savesUid = session.user.id;
+  if (action === 'load') {
+    const { data: row, error } = await sb.from('game_progress').select('data')
+      .eq('user_id', savesUid).eq('game_id', String(gameId)).maybeSingle();
+    if (error) throw new Error(error.message);
+    return { data: row ? row.data : null };
+  }
+  const { error } = await sb.from('game_progress').upsert(
+    { user_id: savesUid, game_id: String(gameId), data, updated_at: new Date().toISOString() },
+    { onConflict: 'user_id,game_id' });
+  if (error) throw new Error(error.message);
+  return { ok: true };
 }
 
 let saveTimer = null;
@@ -338,12 +342,13 @@ function queueSave(data) {
 
 // Не потерять последний сейв при закрытии вкладки.
 window.addEventListener('pagehide', () => {
-  if (!pendingSave || !savesToken) return;
+  if (!pendingSave || !savesToken || !savesUid) return;
   const d = pendingSave; pendingSave = null;
-  fetch(SAVES_FN, {
+  fetch(`${SUPABASE_URL}/rest/v1/game_progress?on_conflict=user_id,game_id`, {
     method: 'POST', keepalive: true,
-    headers: { apikey: SAVES_ANON, Authorization: 'Bearer ' + savesToken, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ game_id: gameId, action: 'save', data: d }),
+    headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + savesToken, 'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ user_id: savesUid, game_id: String(gameId), data: d, updated_at: new Date().toISOString() }),
   }).catch(() => {});
 });
 
