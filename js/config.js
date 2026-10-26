@@ -20,7 +20,11 @@ export const MAKER_URL = 'https://vgametikok.github.io/sharky_ai_game_engine/';
 
 // Белый список источников, откуда разрешено грузить игры в iframe
 // (дублирует frame-src в CSP — защита в глубину).
+// Многофайловые билды (R2 + Worker sharky-games): отдельный origin, грузятся прямым src.
+export const GAMES_CDN = 'https://sharky-games.vgametikok.workers.dev';
+
 export const ALLOWED_GAME_ORIGINS = [
+  GAMES_CDN,
   'https://vgametikok.github.io',
   SUPABASE_URL,
 ];

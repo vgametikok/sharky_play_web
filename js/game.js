@@ -1,7 +1,7 @@
 // Страница игры («watch»): плеер, канал, лайк/дизлайк/избранное/поделиться,
 // описание, комментарии, учёт игрового времени в game_stats.
 import { sb, getMe, fmt, fmtDate } from './sb.js';
-import { SUPABASE_URL, SUPABASE_ANON, GENRE_LABEL, SAVES_FN, SAVES_ANON } from './config.js';
+import { SUPABASE_URL, SUPABASE_ANON, GENRE_LABEL, SAVES_FN, SAVES_ANON, GAMES_CDN } from './config.js';
 import { el, initShell, avatar, channelHref, resolveGameSrc, isStorageGame, requireLogin, loadingEl, emptyEl } from './ui.js';
 
 const app = document.getElementById('app');
@@ -67,7 +67,13 @@ function render() {
   if (wideMq.addEventListener) wideMq.addEventListener('change', onMq);
   window.addEventListener('resize', onMq);
   if (src) {
-    iframe = el('iframe', { sandbox: 'allow-scripts', allow: 'autoplay', title: g.title });
+    // R2-билды живут на отдельном origin (GAMES_CDN), поэтому allow-same-origin безопасен:
+    // игра получает свой localStorage/IndexedDB, но не доступ к этой странице.
+    const isCdn = src.startsWith(GAMES_CDN + '/');
+    iframe = el('iframe', {
+      sandbox: isCdn ? 'allow-scripts allow-same-origin allow-pointer-lock allow-popups' : 'allow-scripts',
+      allow: isCdn ? 'autoplay; fullscreen; gamepad; gyroscope; accelerometer' : 'autoplay',
+      allowfullscreen: isCdn ? '' : null, title: g.title });
     player.append(iframe);
     window.addEventListener('message', onGameMessage);
     if (isStorageGame(src)) {
