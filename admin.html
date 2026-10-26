@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1100">
+<title>Sharky · Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#060608; --panel:#0e0e14; --panel2:#13131c; --line:rgba(255,255,255,.08);
+  --a1:#ff3c5f; --a2:#00e5a0; --a3:#ffe44d; --a4:#7b5cff;
+  --text:#f2f2f4; --sub:rgba(242,242,244,.45); --sub2:rgba(242,242,244,.65);
+  --fd:'Space Grotesk',sans-serif; --fm:'Space Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);font-family:var(--fd);color:var(--text);-webkit-font-smoothing:antialiased;overflow:hidden}
+button{font-family:var(--fd);cursor:pointer}
+input,select,textarea{font-family:var(--fd)}
+a{color:var(--a4)}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#22222e;border-radius:9px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ── LOGIN ── */
+#login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(120% 100% at 50% 0%,#15101f 0%,#060608 60%);z-index:50}
+.login-card{width:340px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:32px 28px}
+.login-logo{font-size:30px;font-weight:700;letter-spacing:-1.5px;margin-bottom:2px}
+.login-logo span{color:var(--a1)}
+.login-tag{font-family:var(--fm);font-size:11px;color:var(--sub);letter-spacing:1px;text-transform:uppercase;margin-bottom:24px}
+.fld{margin-bottom:14px}
+.fld label{display:block;font-size:11px;color:var(--sub);font-family:var(--fm);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.fld input,.fld select,.fld textarea{width:100%;background:var(--panel2);border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;transition:border-color .15s}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--a4)}
+.fld textarea{resize:vertical;min-height:64px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:none;border-radius:9px;padding:10px 16px;font-size:13px;font-weight:700;color:#fff;background:var(--a4);transition:filter .15s,transform .08s}
+.btn:hover{filter:brightness(1.12)}
+.btn:active{transform:scale(.97)}
+.btn.full{width:100%;padding:12px}
+.btn.ghost{background:var(--panel2);border:1.5px solid var(--line);color:var(--text)}
+.btn.green{background:var(--a2);color:#04130d}
+.btn.red{background:var(--a1)}
+.btn.yellow{background:var(--a3);color:#1a1500}
+.btn.sm{padding:5px 10px;font-size:11px;border-radius:7px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.login-err{color:var(--a1);font-size:12px;min-height:16px;margin-top:4px}
+
+/* ── APP SHELL ── */
+#app{display:none;height:100%}
+#app.on{display:grid;grid-template-columns:230px 1fr}
+.side{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:22px 16px}
+.side-logo{font-size:24px;font-weight:700;letter-spacing:-1px;padding:0 8px 22px}
+.side-logo span{color:var(--a1)}
+.navbtn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;color:var(--sub2);font-size:14px;font-weight:500;padding:11px 12px;border-radius:9px;margin-bottom:3px;transition:background .15s,color .15s}
+.navbtn:hover{background:var(--panel2);color:var(--text)}
+.navbtn.active{background:var(--panel2);color:var(--text)}
+.navbtn.active::before{content:'';width:3px;height:16px;border-radius:3px;background:var(--a4);margin-left:-12px;margin-right:9px}
+.navbtn .ic{font-size:16px;width:20px;text-align:center}
+.modbadge{display:none;min-width:18px;height:18px;padding:0 5px;margin-left:auto;border-radius:9px;background:var(--a4);color:#fff;font-size:11px;font-weight:700;align-items:center;justify-content:center;font-family:var(--fm)}
+.modbadge.show{display:inline-flex}
+.mod-cell-main{max-width:340px}
+.mod-cell-main .mono{opacity:.55;font-size:11px}
+.mod-reasons{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px}
+.mod-acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.mod-quote{color:var(--text);opacity:.9}
+.side-foot{margin-top:auto;border-top:1px solid var(--line);padding-top:16px}
+.side-who{font-size:13px;font-weight:700}
+.side-who small{display:block;font-family:var(--fm);font-size:11px;color:var(--sub);font-weight:400}
+.side-foot .btn{margin-top:12px;width:100%}
+
+.main{overflow-y:auto;padding:26px 30px 60px}
+.page{display:none}
+.page.on{display:block}
+.page-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:16px;flex-wrap:wrap}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.page-title small{font-family:var(--fm);font-size:12px;color:var(--sub);font-weight:400;margin-left:8px}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.toolbar input,.toolbar select{background:var(--panel);border:1.5px solid var(--line);border-radius:9px;padding:9px 12px;color:var(--text);font-size:13px;outline:none}
+.toolbar input:focus,.toolbar select:focus{border-color:var(--a4)}
+.toolbar input[type=search]{min-width:200px}
+
+/* ── TABLE ── */
+.tbl{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tbl th{text-align:left;font-family:var(--fm);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--sub);padding:12px 14px;border-bottom:1px solid var(--line);font-weight:700}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr.clickable{cursor:pointer}
+.tbl tr.clickable:hover{background:var(--panel2)}
+.thumb{width:42px;height:42px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;flex-shrink:0}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.cellflex{display:flex;align-items:center;gap:11px}
+.mono{font-family:var(--fm);font-size:11px;color:var(--sub)}
+.tags{display:flex;gap:5px;flex-wrap:wrap}
+.tag{font-family:var(--fm);font-size:10px;padding:2px 7px;border-radius:6px;background:var(--panel2);color:var(--sub2);letter-spacing:.3px}
+.badge{display:inline-flex;align-items:center;font-family:var(--fm);font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:3px 8px;border-radius:6px}
+.b-published{background:rgba(0,229,160,.14);color:var(--a2)}
+.b-draft{background:rgba(255,255,255,.08);color:var(--sub2)}
+.b-rejected{background:rgba(255,60,95,.14);color:var(--a1)}
+.b-hidden{background:rgba(255,228,77,.14);color:var(--a3)}
+.b-deleted{background:rgba(255,60,95,.1);color:rgba(255,60,95,.7)}
+.b-active{background:rgba(0,229,160,.14);color:var(--a2)}
+.b-admin{background:rgba(123,92,255,.16);color:var(--a4)}
+.b-user{background:rgba(255,255,255,.08);color:var(--sub2)}
+.b-adult{background:rgba(255,60,95,.18);color:var(--a1)}
+.b-open{background:rgba(255,60,95,.16);color:var(--a1)}
+.b-reviewing{background:rgba(255,228,77,.14);color:var(--a3)}
+.b-resolved{background:rgba(0,229,160,.14);color:var(--a2)}
+.b-dismissed{background:rgba(255,255,255,.08);color:var(--sub2)}
+.rowacts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.empty{padding:40px;text-align:center;color:var(--sub);font-size:14px}
+
+/* ── ADD PAGE ── */
+.addgrid{display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}
+.card h3{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.frow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.colorfld{display:flex;gap:8px;align-items:center}
+.colorfld input[type=color]{width:42px;height:42px;padding:2px;border:1.5px solid var(--line);border-radius:9px;background:var(--panel2);cursor:pointer}
+.colorfld input[type=text]{flex:1}
+.upl{display:flex;gap:8px;align-items:center;margin-top:6px}
+.upl-status{font-family:var(--fm);font-size:11px;color:var(--sub)}
+.upl-status.ok{color:var(--a2)}
+.upl-status.busy{color:var(--a4)}
+.upl-status.err{color:var(--a1)}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(123,92,255,.3);border-top-color:var(--a4);border-radius:50%;vertical-align:-2px;margin-right:5px;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.filelabel{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1.5px solid var(--line);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;color:var(--sub2)}
+.filelabel:hover{color:var(--text)}
+.filelabel input{display:none}
+.preview-card{aspect-ratio:1;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;overflow:hidden;position:relative;border:1px solid var(--line)}
+.preview-card .pc-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.preview-card .pc-emoji{font-size:40px;z-index:1}
+.preview-card .pc-title{font-size:15px;font-weight:700;z-index:1;text-shadow:0 1px 6px rgba(0,0,0,.5)}
+.prev-frame{width:100%;height:300px;border:1px solid var(--line);border-radius:12px;background:#000;margin-top:12px}
+.queue-item{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--panel2)}
+.queue-item .qi-emoji{font-size:18px}
+.queue-item .qi-x{margin-left:auto;background:none;border:none;color:var(--sub);font-size:16px}
+.queue-item .qi-x:hover{color:var(--a1)}
+.hint{font-size:12px;color:var(--sub);margin-top:8px;line-height:1.5}
+.author-pick{display:flex;gap:10px;align-items:center;margin-bottom:18px}
+.author-pick select{flex:1}
+
+/* ── MODAL ── */
+.modal{position:fixed;inset:0;background:rgba(2,2,5,.78);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:60;padding:30px}
+.modal.on{display:flex}
+.modal-box{background:var(--panel);border:1px solid var(--line);border-radius:16px;width:760px;max-width:100%;max-height:90vh;overflow-y:auto;padding:26px}
+.modal-box.narrow{width:440px}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.modal-head h2{font-size:18px;font-weight:700}
+.x{background:var(--panel2);border:none;color:var(--text);width:32px;height:32px;border-radius:50%;font-size:15px}
+
+/* ── PROFILE DRILL-IN ── */
+.prof-head{display:flex;gap:18px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:18px}
+.prof-av{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0}
+.prof-meta h2{font-size:20px;font-weight:700}
+.prof-meta .ph{font-family:var(--fm);font-size:12px;color:var(--sub)}
+.prof-meta .pid{font-family:var(--fm);font-size:11px;color:rgba(242,242,244,.35);margin-top:3px}
+.prof-badges{display:flex;gap:6px;margin-top:7px}
+.prof-acts{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;max-width:340px}
+.gmod{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;display:grid;grid-template-columns:48px 1fr auto;gap:14px;align-items:center}
+.gmod .gm-title{font-weight:700;font-size:14px}
+.gm-block{display:flex;gap:8px;align-items:center;margin-top:8px}
+.gm-block .gm-label{font-family:var(--fm);font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;width:64px}
+
+/* toast */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a24;border:1px solid var(--line);color:var(--text);padding:11px 20px;border-radius:10px;font-size:13px;font-weight:500;opacity:0;pointer-events:none;transition:all .25s;z-index:90}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.note{background:rgba(123,92,255,.08);border:1px solid rgba(123,92,255,.25);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--sub2);line-height:1.6;margin-bottom:18px}
+.idchip{font-family:var(--fm);font-size:11px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 7px;color:var(--sub2)}
+.pager{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:14px;flex-wrap:wrap;color:var(--sub)}
+.pgnums{display:flex;gap:6px;flex-wrap:wrap}
+.pgbtn{min-width:34px;height:34px;padding:0 9px;border-radius:8px;background:var(--panel);border:1.5px solid var(--line);color:var(--sub2);font-family:var(--fm);font-size:13px}
+.pgbtn:hover:not(:disabled){color:var(--text);border-color:var(--a4)}
+.pgbtn.active{background:var(--a4);color:#fff;border-color:var(--a4)}
+.pgbtn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── DASHBOARD ── */
+.seg{display:inline-flex;background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg button{background:none;border:none;color:var(--sub2);font-size:12px;font-weight:700;padding:7px 13px;border-radius:7px;font-family:var(--fm);letter-spacing:.3px;transition:background .15s,color .15s}
+.seg button:hover{color:var(--text)}
+.seg button.active{background:var(--a4);color:#fff}
+.dash-section{margin-bottom:26px}
+.dash-h{display:flex;align-items:center;gap:9px;margin:4px 0 14px;font-size:16px;font-weight:700}
+.dash-h .dot{width:9px;height:9px;border-radius:50%}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.tile .tv{font-size:25px;font-weight:700;letter-spacing:-.5px;line-height:1.05}
+.tile .tl{font-size:11px;color:var(--sub);font-family:var(--fm);text-transform:uppercase;letter-spacing:.5px;margin-top:5px}
+.tile .ts{font-size:11px;color:var(--sub2);margin-top:5px}
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+@media(max-width:1000px){.dash-grid{grid-template-columns:1fr}}
+.dash-grid .card h3,.dash-section .card h3{margin-bottom:12px}
+.barlist{display:flex;flex-direction:column;gap:9px}
+.barrow{display:grid;grid-template-columns:96px 1fr 44px;gap:10px;align-items:center;font-size:12px}
+.barrow .bk{color:var(--sub2);font-family:var(--fm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bartrack{height:8px;background:var(--panel2);border-radius:5px;overflow:hidden}
+.barfill{height:100%;border-radius:5px;min-width:2px}
+.barrow .bn{text-align:right;font-family:var(--fm);color:var(--sub2)}
+.ret{display:flex;gap:10px}
+.ret .rc{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px 10px;text-align:center}
+.ret .rv{font-size:22px;font-weight:700}
+.ret .rl{font-size:10px;color:var(--sub);font-family:var(--fm);margin-top:4px;letter-spacing:.4px}
+.spark{width:100%;height:92px;display:block}
+.dash-note{font-size:11px;color:var(--sub);margin-top:10px;line-height:1.55}
+.dash-loading{padding:40px;text-align:center;color:var(--sub);font-size:14px}
+.tbl td.num,.tbl th.num{text-align:right;font-family:var(--fm);white-space:nowrap}
+.mini{font-size:10px;color:var(--sub);font-family:var(--fm);margin-top:7px}
+</style>
+</head>
+<body>
+
+<!-- ════ LOGIN ════ -->
+<div id="login">
+  <div class="login-card">
+    <div class="login-logo">Shar<span>ky</span></div>
+    <div class="login-tag" id="login-tag">Admin · Control Room</div>
+    <div class="fld"><label>Email</label><input id="lg-user" type="email" autocomplete="username" placeholder="ваш@email"></div>
+    <div class="fld"><label>Пароль</label><input id="lg-pw" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+    <button class="btn full" id="lg-btn">Войти</button>
+    <div class="login-err" id="lg-err"></div>
+  </div>
+</div>
+
+<!-- ════ APP ════ -->
+<div id="app">
+  <!-- sidebar -->
+  <aside class="side">
+    <div class="side-logo">Shar<span>ky</span></div>
+    <button class="navbtn active" data-page="dashboard"><span class="ic">📊</span>Дашборд</button>
+    <button class="navbtn" data-page="games"><span class="ic">🎮</span>Игры</button>
+    <button class="navbtn" data-page="add"><span class="ic">＋</span>Добавить</button>
+    <button class="navbtn" data-page="profiles"><span class="ic">👤</span>Профили</button>
+    <button class="navbtn" data-page="moderation"><span class="ic">🛡</span>Модерация<span class="modbadge" id="mod-badge"></span></button>
+    <div class="side-foot">
+      <div class="side-who" id="who">—<small id="who-id"></small></div>
+      <button class="btn ghost" id="logout">Выйти</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ── PAGE: DASHBOARD ── -->
+    <section class="page on" data-page="dashboard">
+      <div class="page-head">
+        <div class="page-title">Дашборд <small id="dash-range"></small></div>
+        <div class="seg" id="dash-period">
+          <button data-p="day">День</button>
+          <button data-p="7d" class="active">7 дней</button>
+          <button data-p="30d">30 дней</button>
+          <button data-p="all">Всё время</button>
+        </div>
+      </div>
+      <div id="dash-body"><div class="dash-loading">Загрузка статистики…</div></div>
+    </section>
+
+    <!-- ── PAGE: GAMES ── -->
+    <section class="page" data-page="games">
+      <div class="page-head">
+        <div class="page-title">Игры <small id="games-count"></small></div>
+        <div class="toolbar">
+          <select id="f-status">
+            <option value="">Все статусы</option>
+            <option value="draft">Черновики</option>
+            <option value="published">Опубликовано</option>
+            <option value="rejected">Отклонено</option>
+            <option value="hidden">Скрыто</option>
+            <option value="deleted">Удалено</option>
+          </select>
+          <select id="f-author"><option value="">Все авторы</option></select>
+          <input type="search" id="f-search" placeholder="Поиск по названию / id…">
+        </div>
+      </div>
+      <div id="games-table"></div>
+    </section>
+
+    <!-- ── PAGE: ADD ── -->
+    <section class="page" data-page="add">
+      <div class="page-head"><div class="page-title">Добавить игры</div></div>
+      <div class="addgrid">
+        <div class="card">
+          <div class="author-pick">
+            <select id="add-author"></select>
+            <button class="btn ghost sm" id="new-author-btn">＋ Новый автор</button>
+          </div>
+          <h3>🎮 Игра</h3>
+          <div id="add-form"></div>
+          <div style="display:flex;gap:10px;margin-top:18px">
+            <button class="btn ghost" id="add-to-queue">Добавить в очередь</button>
+            <button class="btn" id="add-now">Сохранить одну</button>
+          </div>
+          <div class="hint">Файл игры и обложка загружаются в Supabase Storage при выборе, либо можно вставить готовый URL. Старые игры с GitHub — просто URL вида <span class="mono">games/tap.html</span>.</div>
+        </div>
+        <div>
+          <div class="card">
+            <h3>Превью</h3>
+            <div class="preview-card" id="prev-card" style="background:#0d080f"></div>
+            <iframe class="prev-frame" id="prev-frame" sandbox="allow-scripts"></iframe>
+          </div>
+          <div class="card" style="margin-top:18px">
+            <h3>Очередь <small class="mono" id="q-author"></small></h3>
+            <div id="queue-list"><div class="empty" style="padding:18px">Пусто</div></div>
+            <button class="btn green full" id="save-all" style="margin-top:12px;display:none">Сохранить всё (<span id="q-n">0</span>)</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── PAGE: PROFILES (list) — авторы и обычные пользователи вместе ── -->
+    <section class="page" data-page="profiles">
+      <div id="prof-list-view">
+        <div class="page-head">
+          <div class="page-title">Профили <small id="profiles-count"></small></div>
+          <div class="toolbar">
+            <select id="pf-type">
+              <option value="all">Все</option>
+              <option value="authors">Авторы</option>
+              <option value="notauthors">Не авторы</option>
+            </select>
+            <select id="pf-status">
+              <option value="">Любой статус</option>
+              <option value="active">Активные</option>
+              <option value="hidden">Скрытые</option>
+              <option value="deleted">Удалённые</option>
+            </select>
+            <input type="search" id="pf-search" placeholder="Поиск по @ / имени…">
+            <button class="btn" id="create-author-btn">＋ Создать автора</button>
+          </div>
+        </div>
+        <div id="profiles-table"></div>
+      </div>
+      <!-- drill-in -->
+      <div id="prof-detail-view" style="display:none">
+        <button class="btn ghost sm" id="prof-back" style="margin-bottom:16px">← К списку профилей</button>
+        <div id="prof-detail"></div>
+      </div>
+    </section>
+
+    <!-- ── PAGE: MODERATION ── -->
+    <section class="page" data-page="moderation">
+      <div class="page-head">
+        <div class="page-title">Модерация <small id="mod-count"></small></div>
+        <div class="seg" id="mod-tabs">
+          <button data-t="reports" class="active">Жалобы</button>
+          <button data-t="feedback">Обратная связь</button>
+        </div>
+      </div>
+      <div id="mod-body"><div class="empty">Загрузка…</div></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ════ MODAL: new/edit author ════ -->
+<div class="modal" id="author-modal">
+  <div class="modal-box narrow">
+    <div class="modal-head"><h2 id="am-title">Новый автор</h2><button class="x" data-close>✕</button></div>
+    <div class="fld"><label>username (без @)</label><input id="am-username"></div>
+    <div class="fld"><label>Отображаемое имя</label><input id="am-name"></div>
+    <div class="frow">
+      <div class="fld"><label>Эмодзи-аватар</label><input id="am-emoji" maxlength="2" value="🎮"></div>
+      <div class="fld"><label>Градиент</label>
+        <select id="am-gradient">
+          <option value="linear-gradient(135deg,#7b5cff,#ff3c5f)">Фиолет → розовый</option>
+          <option value="linear-gradient(135deg,#00c6ff,#0072ff)">Голубой → синий</option>
+          <option value="linear-gradient(135deg,#f7971e,#ffd200)">Оранж → жёлтый</option>
+          <option value="linear-gradient(135deg,#00e5a0,#00c6ff)">Зелёный → голубой</option>
+          <option value="linear-gradient(135deg,#ff3c5f,#7b5cff)">Розовый → фиолет</option>
+        </select>
+      </div>
+    </div>
+    <div class="fld"><label>Bio</label><textarea id="am-bio" placeholder="Описание профиля"></textarea></div>
+    <button class="btn full" id="am-save">Сохранить</button>
+  </div>
+</div>
+
+<!-- ════ MODAL: edit game ════ -->
+<div class="modal" id="game-modal">
+  <div class="modal-box">
+    <div class="modal-head"><h2>Редактировать игру</h2><button class="x" data-close>✕</button></div>
+    <div id="edit-form"></div>
+    <button class="btn full green" id="em-save" style="margin-top:18px">Сохранить изменения</button>
+  </div>
+</div>
+
+<!-- ════ MODAL: update game (новая версия html / сброс прогресса) ════ -->
+<div class="modal" id="update-modal">
+  <div class="modal-box">
+    <div class="modal-head"><h2 id="um-title">Обновить игру</h2><button class="x" data-close>✕</button></div>
+    <div class="fld"><label>Новый HTML-файл игры (пусто — только сброс прогресса)</label><input type="file" id="um-file" accept=".html,text/html,.zip,application/zip"></div>
+    <div class="fld"><label>Что нового (заметка к версии)</label><input type="text" id="um-note" maxlength="300" placeholder="исправлен баг, добавлены уровни…"></div>
+    <div class="fld"><label>Прогресс игроков (облачные сейвы)</label>
+      <label style="display:flex;gap:8px;align-items:center;font-weight:400;cursor:pointer"><input type="radio" name="um-prog" id="um-keep" checked> сохранить</label>
+      <label style="display:flex;gap:8px;align-items:center;font-weight:400;cursor:pointer"><input type="radio" name="um-prog" id="um-wipe"> стереть безвозвратно (сломан формат сейвов)</label>
+    </div>
+    <button class="btn full green" id="um-go" style="margin-top:8px">Выпустить обновление</button>
+    <div id="um-history" style="margin-top:14px"></div>
+  </div>
+</div>
+
+<!-- ════ MODAL: game preview ════ -->
+<div class="modal" id="preview-modal">
+  <div class="modal-box">
+    <div class="modal-head"><h2 id="pm-title">Превью</h2><button class="x" data-close>✕</button></div>
+    <iframe id="pm-frame" sandbox="allow-scripts" style="width:100%;height:420px;border:1px solid var(--line);border-radius:12px;background:#000"></iframe>
+    <div class="rowacts" style="margin-top:16px;justify-content:flex-start" id="pm-acts"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ════════ CONFIG ════════
+const SUPABASE_URL = 'https://safjqsofdrxdmvnfgvjf.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNhZmpxc29mZHJ4ZG12bmZndmpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4Nzk2NDgsImV4cCI6MjA5NjQ1NTY0OH0.gcZ452loXUS0fmApZLr7PqvIYYZ8TqxIX2plgLNnoDo';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: true }
+});
+
+const GENRES = ['arcade','puzzle','reaction','memory','logic','other'];
+const SETTINGS = ['abstract','space','nature','city','retro','other'];
+const DIFFS = ['easy','medium','hard'];
+
+// ════════ STATE ════════
+let admin = null;          // logged-in admin row
+let USERS = [];            // all users
+let GAMES = [];            // all games
+let usersByName = {};       // username -> user
+let usersById = {};         // id -> user
+let gameCountByAuthor = {}; // username -> count (non-deleted)
+let queue = [];            // pending games for batch
+let editingId = null;
+let gamesPage = 1;
+const GAMES_PER_PAGE = 50;
+
+// ════════ HELPERS ════════
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// CSS-context sanitizer. esc() blocks HTML/attribute breakout but leaves CSS
+// metacharacters (; : ( )) live, so a stored gradient/bg like
+// "#222;background-image:url(//evil)" would inject CSS (tracking-pixel / overlay)
+// into the admin's page. Allow only a bare hex colour or the exact
+// linear-gradient(...) shape the app produces; otherwise fall back to default.
+const cssColor = (v, fallback = '#222') => {
+  const s = String(v ?? '').trim();
+  if (/^#[0-9a-fA-F]{3,8}$/.test(s)) return s;
+  if (/^linear-gradient\(\s*-?\d{1,3}deg\s*(?:,\s*#[0-9a-fA-F]{3,8}(?:\s+\d{1,3}%)?\s*){2,6}\)$/.test(s)) return s;
+  return fallback;
+};
+const slug = s => String(s||'').toLowerCase().trim().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'');
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2400);}
+function fmtDate(s){if(!s)return'—';const d=new Date(s);return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'short',year:'2-digit'});}
+function statusBadge(s){return `<span class="badge b-${esc(s)}">${esc(s)}</span>`;}
+
+// ════════ AUTH (Supabase Auth + RLS) ════════
+$('#lg-btn').addEventListener('click', doLogin);
+$('#lg-user').addEventListener('keydown', e=>{if(e.key==='Enter')doLogin();});
+$('#lg-pw').addEventListener('keydown', e=>{if(e.key==='Enter')doLogin();});
+
+async function doLogin(){
+  const err = $('#lg-err'); err.textContent='';
+  const email = $('#lg-user').value.trim();
+  const pw = $('#lg-pw').value;
+  if(!email || !pw){err.textContent='Заполни email и пароль';return;}
+  $('#lg-btn').disabled = true;
+  try{
+    const {data, error} = await db.auth.signInWithPassword({email, password:pw});
+    if(error){err.textContent = /invalid/i.test(error.message)?'Неверный email или пароль':('Ошибка: '+error.message); $('#lg-btn').disabled=false; return;}
+    // проверяем, что это админ (серверная проверка через RLS-функцию)
+    const {data:isAdmin, error:e2} = await db.rpc('is_admin');
+    if(e2){err.textContent='Ошибка проверки прав: '+e2.message; await db.auth.signOut(); $('#lg-btn').disabled=false; return;}
+    if(!isAdmin){err.textContent='Этот аккаунт не админ'; await db.auth.signOut(); $('#lg-btn').disabled=false; return;}
+    enterApp(data.user);
+  }catch(e){console.error(e);err.textContent='Ошибка: '+(e.message||e);$('#lg-btn').disabled=false;}
+}
+
+function enterApp(user){
+  admin = user;
+  $('#login').style.display='none';
+  $('#app').classList.add('on');
+  $('#who').firstChild.textContent = 'Admin';
+  $('#who-id').textContent = user.email || '';
+  loadAll();
+}
+$('#logout').addEventListener('click', async ()=>{ await db.auth.signOut(); location.reload(); });
+
+// ════════ NAV ════════
+document.querySelectorAll('.navbtn').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    const p = b.dataset.page;
+    document.querySelectorAll('.page').forEach(x=>x.classList.toggle('on', x.dataset.page===p));
+    if(p==='profiles'){showProfList();}
+    if(p==='dashboard'){dashView={mode:'list',gameId:null};loadDashboard();}   // всегда список при заходе
+    if(p==='moderation'){loadModeration();}
+  });
+});
+
+// ════════ LOAD ════════
+async function loadAll(){
+  await Promise.all([loadUsers(), loadGames()]);
+  buildIndexes();
+  fillAuthorSelects();
+  renderGames();
+  renderProfiles();
+  renderAddForm();
+  loadDashboard();
+  refreshModBadge();
+}
+async function loadUsers(){
+  // SECURITY: полный список юзеров доступен только админу — читаем через
+  // SECURITY DEFINER RPC admin_list_users() (gated by is_admin()), а не прямым
+  // select по таблице (там колоночные гранты урезаны для роли authenticated).
+  const {data,error}=await db.rpc('admin_list_users');
+  if(error){toast('Ошибка загрузки профилей');return;}
+  USERS = (data||[]).sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||''));
+}
+async function loadGames(){
+  const {data,error}=await db.from('games').select('*').order('created_at',{ascending:false});
+  if(error){toast('Ошибка загрузки игр');return;}
+  GAMES = data||[];
+}
+function buildIndexes(){
+  usersByName={}; usersById={}; gameCountByAuthor={};
+  USERS.forEach(u=>{usersByName[u.username]=u; usersById[u.id]=u; gameCountByAuthor[u.username]=0;});
+  GAMES.forEach(g=>{ if(g.status!=='deleted') gameCountByAuthor[g.author_id]=(gameCountByAuthor[g.author_id]||0)+1; });
+}
+function fillAuthorSelects(){
+  const opts = USERS.map(u=>`<option value="${esc(u.username)}">${esc(u.display_name)} (@${esc(u.username)})</option>`).join('');
+  $('#add-author').innerHTML = opts;
+  $('#f-author').innerHTML = '<option value="">Все авторы</option>'+opts;
+}
+
+// ════════ DASHBOARD ════════
+// Две панели — Аудитория и Игры — по периодам (день / 7д / 30д / всё время).
+// Все цифры считаются на сервере админ-RPC (SECURITY DEFINER + is_admin()),
+// клиент получает только агрегаты. Графики — инлайновый SVG, без внешних либ.
+let dashPeriod = '7d';
+let dashLoading = false;
+let dashView = { mode:'list', gameId:null };  // list | game (drill-in)
+let dashLastGames = [];                         // последний снимок таблицы игр (для CSV)
+
+function dashRange(p){
+  const to = new Date();
+  let from = null;
+  if(p==='day')      from = new Date(Date.now()-24*3600*1000);
+  else if(p==='7d')  from = new Date(Date.now()-7*24*3600*1000);
+  else if(p==='30d') from = new Date(Date.now()-30*24*3600*1000);
+  // p==='all' → from остаётся null (без нижней границы)
+  return { from: from ? from.toISOString() : null, to: to.toISOString() };
+}
+const DASH_LABEL = { day:'за 24 часа', '7d':'за 7 дней', '30d':'за 30 дней', all:'за всё время' };
+
+function dashNf(n){ n=Number(n)||0; if(n>=1000){const k=n/1000; return (k>=100?Math.round(k):(Math.round(k*10)/10))+'k';} return String(n); }
+function dashFmtDur(s){ s=Math.round(Number(s)||0); if(!s) return '0с'; if(s<60) return s+'с'; const m=Math.floor(s/60),r=s%60; return m+'м'+(r?(' '+r+'с'):''); }
+function dashPctCell(v){ return (v===null||v===undefined||v==='') ? '—' : (v+'%'); }
+function dashGemoji(id){ const g=GAMES.find(x=>x.id===id); return g&&g.emoji?g.emoji:'🎮'; }
+function dashTile(v,l,s){ return `<div class="tile"><div class="tv">${esc(String(v))}</div><div class="tl">${esc(l)}</div>${s?`<div class="ts">${esc(s)}</div>`:''}</div>`; }
+function dashRetCard(label,v,n){ return `<div class="rc"><div class="rv">${(v===null||v===undefined)?'—':(v+'%')}</div><div class="rl">${esc(label)}${(n!=null)?(' · n='+n):''}</div></div>`; }
+
+function dashBarlist(arr,color){
+  arr = Array.isArray(arr)?arr:[];
+  if(!arr.length) return '<div class="mini">нет данных</div>';
+  const max = Math.max.apply(null, arr.map(x=>Number(x.users)||0).concat([1]));
+  return `<div class="barlist">${arr.map(x=>{
+    const u = Number(x.users)||0, w = Math.round(100*u/max);
+    return `<div class="barrow"><span class="bk" title="${esc(String(x.key))}">${esc(String(x.key))}</span><div class="bartrack"><div class="barfill" style="width:${w}%;background:${color}"></div></div><span class="bn">${dashNf(u)}</span></div>`;
+  }).join('')}</div>`;
+}
+
+// Платформы: бакеты из platform_group() (SQL) → фиксированный порядок + подписи.
+// Последние два (Android/iOS) — будущие нативные приложения, пока всегда 0
+// (placeholder), наполнятся, когда приложения начнут слать platform='app_*'.
+const DASH_PLATFORMS = [
+  ['tma_android', '📱 TMA Android'],
+  ['tma_ios',     '🍎 TMA iOS'],
+  ['tg_web',      '🌐 Telegram Web'],
+  ['desktop',     '🖥 Desktop'],
+  ['android_app', '🤖 Android'],
+  ['ios_app',     '📲 iOS'],
+];
+function dashPlatformList(arr, color){
+  arr = Array.isArray(arr)?arr:[];
+  const m = {}; let total = 0;
+  arr.forEach(x=>{ const u = Number(x.users)||0; m[x.key] = (m[x.key]||0)+u; total += u; });
+  if(!total) return '<div class="mini">нет данных</div>';
+  const rows = DASH_PLATFORMS.map(([k,label])=>({ key: label, users: m[k]||0 }));
+  if(m.other) rows.push({ key:'❓ Другое', users:m.other });
+  return dashBarlist(rows, color);
+}
+
+function dashSpark(ts, field, color){
+  ts = Array.isArray(ts)?ts:[];
+  if(ts.length<2) return '<div class="mini">недостаточно данных за период</div>';
+  const vals = ts.map(r=>Number(r[field])||0);
+  const max = Math.max.apply(null, vals.concat([1]));
+  const W=620, H=92, pad=7, n=vals.length;
+  const X = i => pad + i*(W-2*pad)/(n-1);
+  const Y = v => H-pad - (v/max)*(H-2*pad);
+  const pts = vals.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+  const area = `${pad.toFixed(1)},${(H-pad).toFixed(1)} ${pts} ${(W-pad).toFixed(1)},${(H-pad).toFixed(1)}`;
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <polygon points="${area}" fill="${color}" opacity="0.12"></polygon>
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
+  </svg><div class="mini">${esc(ts[0].bucket)} → ${esc(ts[ts.length-1].bucket)} · пик ${dashNf(max)}</div>`;
+}
+
+function dashRenderAudience(ov, ts, ret){
+  ov = ov||{}; ret = ret||{};
+  const totAud = Number(ov.total_audience)||0, prem = Number(ov.premium_users)||0;
+  const premShare = totAud ? Math.round(1000*prem/totAud)/10 : 0;
+  const tiles = [
+    dashTile(dashNf(ov.total_users), 'Всего юзеров', 'аудитория Telegram'),
+    dashTile(dashNf(ov.new_users), 'Новые', DASH_LABEL[dashPeriod]),
+    dashTile(dashNf(ov.active_users), 'Активные', 'заходили (DAU/период)'),
+    dashTile(dashNf(ov.returning_users), 'Вернувшиеся', 'не новые'),
+    dashTile(premShare+'%', 'Premium', dashNf(prem)+' польз.'),
+    dashTile(dashNf(ov.opens), 'Запусков', DASH_LABEL[dashPeriod]),
+  ].join('');
+  const retBlock = `<div class="ret">
+      ${dashRetCard('D1', ret.d1, ret.cohort_d1)}
+      ${dashRetCard('D7', ret.d7, ret.cohort_d7)}
+      ${dashRetCard('D30', ret.d30, ret.cohort_d30)}
+    </div>
+    <div class="dash-note">Доля новых пользователей, вернувшихся на след. день (D1) и хотя бы раз в течение 7 / 30 дней. По логу запусков; n — размер когорты.</div>`;
+  return `<div class="dash-section">
+    <div class="dash-h"><span class="dot" style="background:var(--a4)"></span>Аудитория</div>
+    <div class="tiles">${tiles}</div>
+    <div class="dash-grid">
+      <div class="card"><h3>Активные по дням</h3>${dashSpark(ts,'active_users','var(--a4)')}</div>
+      <div class="card"><h3>Удержание</h3>${retBlock}</div>
+      <div class="card"><h3>Платформы</h3>${dashPlatformList(ov.platforms,'var(--a2)')}</div>
+      <div class="card"><h3>Языки</h3>${dashBarlist(ov.languages,'var(--a3)')}</div>
+    </div>
+    <div class="card" style="margin-top:16px"><h3>Источники переходов</h3>${dashBarlist(ov.referrals,'var(--a1)')}</div>
+  </div>`;
+}
+
+function dashRenderGames(games, gts){
+  games = Array.isArray(games)?games:[];
+  let tImp=0,t3=0,t10=0,tLk=0,tCm=0,tSh=0,tSv=0,wTime=0,wN=0;
+  games.forEach(g=>{
+    tImp+=Number(g.impressions)||0; t3+=Number(g.sessions_3s)||0; t10+=Number(g.sessions_10s)||0;
+    tLk+=Number(g.likes)||0; tCm+=Number(g.comments)||0; tSh+=Number(g.shares)||0; tSv+=Number(g.saves)||0;
+    const a=Number(g.avg_session_sec)||0, s=Number(g.sessions_3s)||0;
+    if(a&&s){ wTime+=a*s; wN+=s; }
+  });
+  const avgT = wN? wTime/wN : 0;
+  const hook = tImp? Math.round(1000*t10/tImp)/10 : 0;
+  const tiles = [
+    dashTile(dashNf(tImp),'Показы','загрузок игр'),
+    dashTile(dashNf(t3),'Сессии >3с','просмотры'),
+    dashTile(dashFmtDur(avgT),'Ср. время','сессии >3с'),
+    dashTile(hook+'%','Hook >10с','из показов'),
+    dashTile(dashNf(tLk),'Лайки',''),
+    dashTile(dashNf(tCm),'Комменты',''),
+    dashTile(dashNf(tSh),'Шеры',''),
+    dashTile(dashNf(tSv),'Избранное',''),
+  ].join('');
+  const rows = games.map(g=>`<tr class="clickable" data-game="${esc(g.game_id)}">
+    <td><div class="cellflex"><div class="thumb" style="width:30px;height:30px;font-size:14px;background:${cssColor(g.bg,'#1a1a24')}">${esc(dashGemoji(g.game_id))}</div><div style="font-weight:700">${esc(g.title)}</div></div></td>
+    <td class="num">${dashNf(g.impressions)}</td>
+    <td class="num">${dashNf(g.sessions_3s)}</td>
+    <td class="num">${dashPctCell(g.hook_rate)}</td>
+    <td class="num">${dashFmtDur(g.avg_session_sec)}</td>
+    <td class="num">${dashPctCell(g.retention_d1)}</td>
+    <td class="num">${dashPctCell(g.retention_d7)}</td>
+    <td class="num">${dashNf(g.likes)}</td>
+    <td class="num">${dashNf(g.comments)}</td>
+    <td class="num">${dashNf(g.shares)}</td>
+    <td class="num">${dashNf(g.saves)}</td>
+  </tr>`).join('');
+  const table = `<table class="tbl"><thead><tr>
+      <th>Игра</th><th class="num">Показы</th><th class="num">Сессии&nbsp;&gt;3с</th><th class="num">Hook&nbsp;&gt;10с</th><th class="num">Ср.&nbsp;время</th><th class="num">D1</th><th class="num">D7</th><th class="num" title="Лайки">♥</th><th class="num" title="Комменты">💬</th><th class="num" title="Шеры">↗</th><th class="num" title="Избранное">★</th>
+    </tr></thead><tbody>${rows || '<tr><td colspan="11" class="empty">Нет данных за период</td></tr>'}</tbody></table>`;
+  return `<div class="dash-section">
+    <div class="dash-h"><span class="dot" style="background:var(--a1)"></span>Игры
+      <button class="btn ghost sm" id="dash-csv" style="margin-left:auto">⬇ CSV</button></div>
+    <div class="tiles">${tiles}</div>
+    <div class="card" style="margin-top:14px"><h3>Сессии &gt;3с по дням</h3>${dashSpark(gts,'sessions_3s','var(--a1)')}</div>
+    <div style="margin-top:14px">${table}</div>
+    <div class="dash-note">Клик по игре — детальная статистика. Сессия = показ игры дольше 3с после загрузки (аналог просмотра на YouTube). Hook = доля показов, где игрок остаётся &gt;10с. D1/D7 — возврат игрока к этой игре в течение 1 / 7 дней. Среднее время — по сессиям &gt;3с.</div>
+  </div>`;
+}
+
+// Диспетчер: общий дашборд или детальная страница одной игры.
+async function loadDashboard(){
+  if(dashView.mode==='game') return loadGameDetail(dashView.gameId);
+  return loadDashList();
+}
+
+async function loadDashList(){
+  if(dashLoading) return;
+  dashLoading = true;
+  const body = $('#dash-body');
+  body.innerHTML = '<div class="dash-loading">Загрузка статистики…</div>';
+  $('#dash-range').textContent = DASH_LABEL[dashPeriod] || '';
+  const { from, to } = dashRange(dashPeriod);
+  try{
+    const [ov, ts, ret, games, gts] = await Promise.all([
+      db.rpc('admin_audience_overview',   { p_from: from, p_to: to }),
+      db.rpc('admin_audience_timeseries', { p_from: from, p_to: to, p_bucket: 'day' }),
+      db.rpc('admin_audience_retention'),
+      db.rpc('admin_games_overview',      { p_from: from, p_to: to }),
+      db.rpc('admin_games_timeseries',    { p_from: from, p_to: to, p_bucket: 'day', p_game_id: null }),
+    ]);
+    const err = ov.error||ts.error||ret.error||games.error||gts.error;
+    if(err){ body.innerHTML = `<div class="empty">Ошибка загрузки статистики: ${esc(err.message)}</div>`; return; }
+    dashLastGames = Array.isArray(games.data) ? games.data : [];
+    body.innerHTML = dashRenderAudience(ov.data, ts.data, ret.data) + dashRenderGames(games.data, gts.data);
+    body.querySelectorAll('tr[data-game]').forEach(tr=>tr.addEventListener('click', ()=>openGameDetail(tr.dataset.game)));
+    const csv = $('#dash-csv'); if(csv) csv.addEventListener('click', dashExportCsv);
+  }catch(e){
+    console.error('dashboard', e);
+    body.innerHTML = `<div class="empty">Ошибка: ${esc(e.message||String(e))}</div>`;
+  }finally{ dashLoading = false; }
+}
+
+function openGameDetail(id){ dashView = { mode:'game', gameId:id }; window.scrollTo(0,0); loadDashboard(); }
+function backToDashList(){ dashView = { mode:'list', gameId:null }; window.scrollTo(0,0); loadDashboard(); }
+function dashBackBtn(){ return `<button class="btn ghost sm" id="dash-back" style="margin-bottom:16px">← К дашборду</button>`; }
+
+async function loadGameDetail(id){
+  if(dashLoading) return;
+  dashLoading = true;
+  const body = $('#dash-body');
+  const wireBack = ()=>{ const b=$('#dash-back'); if(b) b.addEventListener('click', backToDashList); };
+  body.innerHTML = '<div class="dash-loading">Загрузка статистики игры…</div>';
+  $('#dash-range').textContent = DASH_LABEL[dashPeriod] || '';
+  const { from, to } = dashRange(dashPeriod);
+  try{
+    const [det, gts] = await Promise.all([
+      db.rpc('admin_game_detail',      { p_game_id:id, p_from:from, p_to:to }),
+      db.rpc('admin_games_timeseries', { p_from:from, p_to:to, p_bucket:'day', p_game_id:id }),
+    ]);
+    const err = det.error||gts.error;
+    if(err){ body.innerHTML = dashBackBtn() + `<div class="empty">Ошибка: ${esc(err.message)}</div>`; wireBack(); return; }
+    body.innerHTML = dashBackBtn() + dashRenderGameDetail(det.data, gts.data);
+    wireBack();
+  }catch(e){
+    console.error('game detail', e);
+    body.innerHTML = dashBackBtn() + `<div class="empty">Ошибка: ${esc(e.message||String(e))}</div>`;
+    wireBack();
+  }finally{ dashLoading = false; }
+}
+
+function dashRenderGameDetail(d, gts){
+  d = d||{}; const g = d.game||{}; const tt = d.totals||{};
+  const head = `<div class="prof-head">
+      <div class="prof-av" style="background:${cssColor(g.bg)};border-radius:14px;font-size:28px">${esc(g.emoji||'🎮')}</div>
+      <div class="prof-meta">
+        <h2>${esc(g.title||g.id||'—')}</h2>
+        <div class="ph">${esc(g.id||'')} · @${esc(g.author_id||'—')}</div>
+        <div class="prof-badges">${g.status?statusBadge(g.status):''}${g.genre?`<span class="tag">${esc(g.genre)}</span>`:''}${g.difficulty?`<span class="tag">${esc(g.difficulty)}</span>`:''}</div>
+      </div>
+    </div>`;
+  const tiles = [
+    dashTile(dashNf(tt.impressions),'Показы','загрузок'),
+    dashTile(dashNf(tt.sessions_3s),'Сессии >3с','просмотры'),
+    dashTile(dashNf(tt.sessions_10s),'Досмотры >10с',''),
+    dashTile(dashPctCell(tt.hook_rate),'Hook >10с','из показов'),
+    dashTile(dashFmtDur(tt.avg_session_sec),'Ср. время','сессии >3с'),
+    dashTile(dashFmtDur(tt.median_session_sec),'Медиана','сессии >3с'),
+    dashTile(dashNf(tt.players),'Игроки','уникальных'),
+    dashTile(dashNf(tt.likes),'Лайки',''),
+    dashTile(dashNf(tt.comments),'Комменты',''),
+    dashTile(dashNf(tt.shares),'Шеры',''),
+    dashTile(dashNf(tt.saves),'Избранное',''),
+  ].join('');
+  const ret = `<div class="ret">
+      ${dashRetCard('D1', tt.retention_d1, tt.cohort_d1)}
+      ${dashRetCard('D7', tt.retention_d7, tt.cohort_d7)}
+      ${dashRetCard('D30', tt.retention_d30, tt.cohort_d30)}
+    </div><div class="dash-note">Возврат игрока к этой игре: на след. день (D1) и хотя бы раз в течение 7 / 30 дней. n — размер когорты.</div>`;
+  const hist = dashBarlist((d.histogram||[]).map(x=>({ key:x.key, users:x.n })), 'var(--a3)');
+  const plats = dashPlatformList(d.platforms, 'var(--a2)');
+  return `<div class="dash-section">
+    ${head}
+    <div class="tiles">${tiles}</div>
+    <div class="card" style="margin-top:16px"><h3>Показы и сессии &gt;3с по дням</h3>${dashSpark2(gts)}</div>
+    <div class="dash-grid">
+      <div class="card"><h3>Длительность просмотра</h3>${hist}</div>
+      <div class="card"><h3>Удержание</h3>${ret}</div>
+      <div class="card"><h3>Платформы игроков</h3>${plats}</div>
+    </div>
+  </div>`;
+}
+
+// Двухлинейный график: показы (пунктир) + сессии>3с (акцент).
+function dashSpark2(ts){
+  ts = Array.isArray(ts)?ts:[];
+  if(ts.length<2) return '<div class="mini">недостаточно данных за период</div>';
+  const imp = ts.map(r=>Number(r.impressions)||0), ses = ts.map(r=>Number(r.sessions_3s)||0);
+  const max = Math.max.apply(null, imp.concat(ses).concat([1]));
+  const W=620,H=110,pad=8,n=ts.length;
+  const X=i=>pad+i*(W-2*pad)/(n-1), Y=v=>H-pad-(v/max)*(H-2*pad);
+  const line=a=>a.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+  const impPts=line(imp), area=`${pad.toFixed(1)},${(H-pad).toFixed(1)} ${impPts} ${(W-pad).toFixed(1)},${(H-pad).toFixed(1)}`;
+  return `<svg class="spark" style="height:110px" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <polygon points="${area}" fill="var(--a1)" opacity="0.10"></polygon>
+    <polyline points="${impPts}" fill="none" stroke="var(--sub2)" stroke-width="1.6" stroke-dasharray="4 3" stroke-linejoin="round"></polyline>
+    <polyline points="${line(ses)}" fill="none" stroke="var(--a1)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"></polyline>
+  </svg><div class="mini">пунктир — показы · линия — сессии &gt;3с · ${esc(ts[0].bucket)} → ${esc(ts[ts.length-1].bucket)} · пик ${dashNf(max)}</div>`;
+}
+
+// ── CSV экспорт таблицы игр за выбранный период ──
+function dashCsvCell(v){ v = (v===null||v===undefined)?'':String(v); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+function dashExportCsv(){
+  const cols = ['game_id','title','status','impressions','sessions_3s','sessions_10s','hook_rate','avg_session_sec','retention_d1','retention_d7','players','likes','comments','shares','saves'];
+  const head = ['id','название','статус','показы','сессии>3с','сессии>10с','hook%','ср.время_с','D1%','D7%','игроки','лайки','комменты','шеры','избранное'];
+  const lines = [head.map(dashCsvCell).join(',')].concat(
+    (dashLastGames||[]).map(g=>cols.map(k=>dashCsvCell(g[k])).join(','))
+  );
+  const blob = new Blob(['﻿'+lines.join('\r\n')], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `sharky_games_${dashPeriod}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+  toast('CSV выгружен');
+}
+
+document.querySelectorAll('#dash-period button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    if(b.dataset.p===dashPeriod) return;
+    document.querySelectorAll('#dash-period button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    dashPeriod = b.dataset.p;
+    loadDashboard();
+  });
+});
+
+// ════════ MODERATION (жалобы + обратная связь) ════════
+let modTab = 'reports';
+const MOD_REASONS = { spam:'Спам/реклама', abuse:'Оскорбления', sexual:'18+ / секс.', violence:'Насилие', broken:'Не работает', other:'Другое' };
+
+async function loadModeration(){ await renderModeration(); refreshModBadge(); }
+async function renderModeration(){
+  $('#mod-body').innerHTML = '<div class="empty">Загрузка…</div>';
+  if(modTab==='reports') await renderReports(); else await renderFeedback();
+}
+
+async function renderReports(){
+  const body = $('#mod-body');
+  const { data, error } = await db.rpc('admin_list_reports', { p_status: null });
+  if(error){ body.innerHTML = `<div class="empty">Ошибка: ${esc(error.message)}</div>`; return; }
+  const rows = data || [];
+  $('#mod-count').textContent = `· ${rows.filter(r=>r.status==='open').length} открытых`;
+  if(!rows.length){ body.innerHTML = '<div class="empty">Жалоб пока нет 🎉</div>'; return; }
+  body.innerHTML = `<table class="tbl"><thead><tr>
+    <th>Объект</th><th>Причина</th><th>От кого</th><th>Когда</th><th>Статус</th><th></th></tr></thead><tbody>${
+    rows.map(r=>{
+      const ico = r.target_type==='game'?'🎮':r.target_type==='comment'?'💬':'👤';
+      let title = r.target_title!=null ? esc(String(r.target_title)) : '<span class="mono">— недоступно —</span>';
+      if(r.target_type==='comment') title = `<span class="mod-quote">«${title}»</span>`;
+      const extra = r.open_same_target>1 ? ` <span class="badge b-open">ещё ${r.open_same_target-1}</span>` : '';
+      const hiddenTag = r.comment_hidden===true ? ' <span class="badge b-hidden">скрыт</span>' : '';
+      const gStat = (r.target_type==='game'&&r.game_status) ? ` ${statusBadge(r.game_status)}` : '';
+      return `<tr>
+        <td class="mod-cell-main">${ico} ${title}${extra}${hiddenTag}${gStat}
+          <div class="mono">${esc(r.target_type)} · ${esc(String(r.target_id).slice(0,20))}</div></td>
+        <td>${esc(MOD_REASONS[r.reason]||r.reason)}${r.note?`<div class="mono" style="opacity:.6">${esc(r.note)}</div>`:''}</td>
+        <td>${r.reporter_name?esc(r.reporter_name):'—'}<div class="mono">${r.reporter_handle?'@'+esc(r.reporter_handle):''}</div></td>
+        <td class="mono">${fmtDate(r.created_at)}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td>${reportActions(r)}</td></tr>`;
+    }).join('')}</tbody></table>`;
+  body.querySelectorAll('button[data-ract]').forEach(b=>b.addEventListener('click',()=>onReportAct(b.dataset)));
+}
+
+function reportActions(r){
+  const a = [];
+  if(r.target_type==='comment'){
+    if(r.comment_hidden===true) a.push(`<button class="btn ghost sm" data-ract="unhide" data-cid="${esc(r.target_id)}">Вернуть коммент</button>`);
+    else if(r.comment_hidden===false) a.push(`<button class="btn sm" data-ract="hide" data-cid="${esc(r.target_id)}">Скрыть коммент</button>`);
+  }
+  if(r.target_type==='game' && r.game_status && !['hidden','deleted'].includes(r.game_status)){
+    a.push(`<button class="btn sm" data-ract="hidegame" data-gid="${esc(r.target_id)}">Скрыть игру</button>`);
+  }
+  if(r.status==='open' || r.status==='reviewing'){
+    a.push(`<button class="btn ghost sm" data-ract="resolve" data-id="${r.id}">✓ Решено</button>`);
+    a.push(`<button class="btn ghost sm" data-ract="dismiss" data-id="${r.id}">Отклонить</button>`);
+  } else {
+    a.push(`<button class="btn ghost sm" data-ract="reopen" data-id="${r.id}">↩ Открыть</button>`);
+  }
+  return `<div class="mod-acts">${a.join('')}</div>`;
+}
+
+async function onReportAct(d){
+  try {
+    if(d.ract==='hide' || d.ract==='unhide'){
+      const { error } = await db.rpc('admin_hide_comment', { p_id: d.cid, p_hidden: d.ract==='hide' });
+      if(error) throw error; toast(d.ract==='hide'?'Комментарий скрыт':'Комментарий возвращён');
+    } else if(d.ract==='hidegame'){
+      const { error } = await db.from('games').update({ status:'hidden' }).eq('id', d.gid);
+      if(error) throw error;
+      const g = GAMES.find(x=>x.id===d.gid); if(g) g.status='hidden';
+      toast('Игра скрыта');
+    } else {
+      const status = d.ract==='resolve'?'resolved':d.ract==='dismiss'?'dismissed':'open';
+      const { error } = await db.rpc('admin_resolve_report', { p_id: d.id, p_status: status });
+      if(error) throw error; toast('Обновлено');
+    }
+  } catch(e){ toast('Ошибка: '+(e.message||e)); return; }
+  renderReports(); refreshModBadge();
+}
+
+async function renderFeedback(){
+  const body = $('#mod-body');
+  const { data, error } = await db.rpc('admin_list_feedback', { p_status: null });
+  if(error){ body.innerHTML = `<div class="empty">Ошибка: ${esc(error.message)}</div>`; return; }
+  const rows = data || [];
+  $('#mod-count').textContent = `· ${rows.filter(r=>r.status==='open').length} открытых`;
+  if(!rows.length){ body.innerHTML = '<div class="empty">Обращений пока нет</div>'; return; }
+  body.innerHTML = `<table class="tbl"><thead><tr>
+    <th>Сообщение</th><th>Контекст</th><th>От кого</th><th>Когда</th><th>Статус</th><th></th></tr></thead><tbody>${
+    rows.map(f=>{
+      const c = f.context || {};
+      const ctx = [c.game_id?('🎮 '+esc(c.game_id)):'', esc(c.platform||''), c.version?('v'+esc(c.version)):''].filter(Boolean).join(' · ');
+      return `<tr>
+        <td class="mod-cell-main"><div class="mod-quote">${esc(f.text)}</div></td>
+        <td class="mono" style="font-size:11px;opacity:.7">${ctx}</td>
+        <td>${f.user_name?esc(f.user_name):'—'}<div class="mono">${f.user_handle?'@'+esc(f.user_handle):''}</div></td>
+        <td class="mono">${fmtDate(f.created_at)}</td>
+        <td>${statusBadge(f.status)}</td>
+        <td><div class="mod-acts">${
+          f.status==='open'
+            ? `<button class="btn ghost sm" data-fact="resolve" data-id="${f.id}">✓ Решено</button>`
+            : `<button class="btn ghost sm" data-fact="reopen" data-id="${f.id}">↩ Открыть</button>`
+        }</div></td></tr>`;
+    }).join('')}</tbody></table>`;
+  body.querySelectorAll('button[data-fact]').forEach(b=>b.addEventListener('click',async()=>{
+    const status = b.dataset.fact==='resolve'?'resolved':'open';
+    const { error } = await db.rpc('admin_resolve_feedback', { p_id: b.dataset.id, p_status: status });
+    if(error){ toast('Ошибка: '+error.message); return; }
+    toast('Обновлено'); renderFeedback(); refreshModBadge();
+  }));
+}
+
+async function refreshModBadge(){
+  try {
+    const { data, error } = await db.rpc('admin_moderation_counts');
+    if(error) return;
+    const n = (data?.open_reports||0) + (data?.open_feedback||0);
+    const badge = $('#mod-badge');
+    if(!badge) return;
+    badge.textContent = n>99?'99+':String(n);
+    badge.classList.toggle('show', n>0);
+  } catch(e){}
+}
+
+document.querySelectorAll('#mod-tabs button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    if(b.dataset.t===modTab) return;
+    document.querySelectorAll('#mod-tabs button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    modTab = b.dataset.t;
+    renderModeration();
+  });
+});
+
+// ════════ GAME FORM (reusable) ════════
+function gameFormHTML(p){
+  const sel=(arr,id)=>`<select id="${p}_${id}">${arr.map(v=>`<option value="${v}">${v}</option>`).join('')}</select>`;
+  return `
+  <div class="frow">
+    <div class="fld"><label>id (slug)</label><input id="${p}_id" placeholder="my-game"></div>
+    <div class="fld"><label>Название</label><input id="${p}_title" maxlength="30" placeholder="до 30 символов"></div>
+  </div>
+  <div class="fld"><label>Описание</label><textarea id="${p}_description" placeholder="Короткое описание (для ленты позже)"></textarea></div>
+  <div class="frow3">
+    <div class="fld"><label>Эмодзи</label><input id="${p}_emoji" maxlength="2" value="🎮"></div>
+    <div class="fld"><label>Подпись счёта</label><input id="${p}_score_label" value="очков"></div>
+    <div class="fld"><label>Статус</label><select id="${p}_status"><option value="draft">draft</option><option value="published">published</option></select></div>
+  </div>
+  <div class="frow3">
+    <div class="fld"><label>Жанр</label>${sel(GENRES,'genre')}</div>
+    <div class="fld"><label>Сеттинг</label>${sel(SETTINGS,'setting')}</div>
+    <div class="fld"><label>Сложность</label>${sel(DIFFS,'difficulty')}</div>
+  </div>
+  <div class="frow">
+    <div class="fld"><label>Accent</label><div class="colorfld"><input type="color" id="${p}_accent_c" value="#ff3c5f"><input type="text" id="${p}_accent" value="#ff3c5f"></div></div>
+    <div class="fld"><label>Фон</label><div class="colorfld"><input type="color" id="${p}_bg_c" value="#0d080f"><input type="text" id="${p}_bg" value="#0d080f"></div></div>
+  </div>
+  <div class="fld"><label>Файл игры (.html) или URL</label>
+    <input id="${p}_src" placeholder="https://… или games/my-game.html">
+    <div class="upl">
+      <label class="filelabel">📎 Загрузить .html<input type="file" accept=".html,text/html" id="${p}_srcfile"></label>
+      <label class="filelabel">🗜️ Загрузить .zip (многофайловый билд)<input type="file" accept=".zip,application/zip" id="${p}_zipfile"></label>
+      <span class="upl-status" id="${p}_srcstatus"></span>
+    </div>
+  </div>
+  <div class="fld"><label>Обложка (картинка) или URL</label>
+    <input id="${p}_thumbnail_url" placeholder="https://…">
+    <div class="upl">
+      <label class="filelabel">🖼️ Загрузить обложку<input type="file" accept="image/*" id="${p}_thumbfile"></label>
+      <span class="upl-status" id="${p}_thumbstatus"></span>
+    </div>
+  </div>`;
+}
+
+function wireGameForm(p, onChange){
+  // color sync
+  [['accent'],['bg']].forEach(([k])=>{
+    const c=$(`#${p}_${k}_c`), t=$(`#${p}_${k}`);
+    c.addEventListener('input',()=>{t.value=c.value;onChange&&onChange();});
+    t.addEventListener('input',()=>{if(/^#[0-9a-f]{6}$/i.test(t.value))c.value=t.value;onChange&&onChange();});
+  });
+  // uploads
+  $(`#${p}_srcfile`).addEventListener('change',e=>uploadFile(e.target.files[0],'games',p,'src',onChange));
+  $(`#${p}_zipfile`).addEventListener('change',e=>uploadZipToForm(e.target.files[0],p,onChange));
+  $(`#${p}_thumbfile`).addEventListener('change',e=>uploadFile(e.target.files[0],'thumbnails',p,'thumbnail_url',onChange));
+  if(onChange){
+    ['title','emoji'].forEach(k=>$(`#${p}_${k}`).addEventListener('input',onChange));
+    $(`#${p}_src`).addEventListener('change',onChange);
+    $(`#${p}_thumbnail_url`).addEventListener('change',onChange);
+    // auto-slug from title
+    $(`#${p}_title`).addEventListener('input',()=>{const idf=$(`#${p}_id`);if(!idf.dataset.touched)idf.value=slug($(`#${p}_title`).value);});
+    $(`#${p}_id`).addEventListener('input',e=>{e.target.dataset.touched='1';e.target.value=slug(e.target.value);});
+  }
+}
+
+function genId(filename){
+  const base = (slug((filename||'').replace(/\.[^.]+$/,'')).slice(0,10).replace(/-+$/,'')) || 'game';
+  const code = String(Math.floor(Math.random()*1e7)).padStart(7,'0');
+  return base + '-' + code;
+}
+function setUploadBusy(on){
+  ['#add-now','#add-to-queue','#save-all','#em-save'].forEach(s=>{const el=$(s);if(el)el.disabled=on;});
+}
+// ══ Многофайловые билды: zip → Worker sharky-games (R2), распаковка на сервере ══
+// Пока только админ (Worker проверяет is_admin()); позже — автор игры.
+const GAMES_CDN = 'https://sharky-games.vgametikok.workers.dev';
+const ZIP_PART = 50*1024*1024;
+async function uploadBuildZip(file, gameId, version, onStatus){
+  const {data:{session}} = await db.auth.getSession();
+  const token = session && session.access_token;
+  if(!token) throw new Error('сессия истекла — войдите заново');
+  const H = {'Authorization':'Bearer '+token};
+  const q = `game_id=${encodeURIComponent(gameId)}&version=${version}`;
+  const call = async (op, opt) => {
+    const r = await fetch(`${GAMES_CDN}/api/upload/${op}?${q}${opt.extra||''}`, {method:opt.method||'POST', headers:{...H, ...(opt.json?{'Content-Type':'application/json'}:{})}, body:opt.body});
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+    return d;
+  };
+  const {uploadId} = await call('start', {});
+  const parts = [];
+  try{
+    const n = Math.max(1, Math.ceil(file.size/ZIP_PART));
+    for(let i=0;i<n;i++){
+      onStatus&&onStatus(`загрузка ${i+1}/${n}…`);
+      parts.push(await call('part', {method:'PUT', extra:`&upload_id=${encodeURIComponent(uploadId)}&part=${i+1}`, body:file.slice(i*ZIP_PART,(i+1)*ZIP_PART)}));
+    }
+    onStatus&&onStatus('распаковка на сервере…');
+    return await call('complete', {json:true, body:JSON.stringify({uploadId, parts})});
+  }catch(e){ call('abort',{json:true, body:JSON.stringify({uploadId})}).catch(()=>{}); throw e; }
+}
+async function uploadZipToForm(file, p, onChange){
+  if(!file) return;
+  const idf = $(`#${p}_id`);
+  let id = slug(idf.value);
+  if(!id){ id = genId(file.name.replace(/\.zip$/i,'')); idf.value = id; idf.dataset.touched='1'; }
+  const statusEl = $(`#${p}_srcstatus`);
+  statusEl.className='upl-status busy'; setUploadBusy(true);
+  try{
+    const r = await uploadBuildZip(file, id, 1, t=>{ statusEl.innerHTML='<span class="spin"></span> '+esc(t); });
+    $(`#${p}_src`).value = r.src;
+    statusEl.innerHTML=`✓ ${r.files} файлов, ${(r.size/1048576).toFixed(1)} МБ`; statusEl.className='upl-status ok';
+    onChange&&onChange();
+  }catch(e){ statusEl.innerHTML='✕ ошибка: '+esc(e.message||String(e)); statusEl.className='upl-status err'; toast('Ошибка загрузки: '+(e.message||e)); }
+  finally{ setUploadBusy(false); }
+}
+
+async function uploadFile(file, bucket, p, targetField, onChange){
+  if(!file)return;
+  const idf = $(`#${p}_id`);
+  // ID присваивается автоматически из имени файла игры (имя ≤10 симв. + 7-значный код)
+  if(bucket==='games'){ idf.value = genId(file.name); idf.dataset.touched='1'; }
+  let id = slug(idf.value);
+  if(!id){ id = genId(file.name); idf.value = id; idf.dataset.touched='1'; }
+  const statusEl = $(`#${p}_${targetField==='src'?'srcstatus':'thumbstatus'}`);
+  statusEl.innerHTML='<span class="spin"></span> Загрузка…'; statusEl.className='upl-status busy';
+  setUploadBusy(true);
+  try{
+    const ext = bucket==='games' ? 'html' : (file.name.split('.').pop()||'png');
+    const path = `${id}.${ext}`;
+    // Грузим явным запросом с токеном сессии — storage-клиент не подставляет JWT
+    const {data:{session}} = await db.auth.getSession();
+    const token = session && session.access_token;
+    if(!token) throw new Error('сессия истекла — войдите заново');
+    const sendType = bucket==='games' ? 'text/html; charset=utf-8' : (file.type || 'image/png');
+    const body = bucket==='games' ? new Blob([file], {type: sendType}) : file;
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
+      method:'POST',
+      headers:{
+        'Authorization':'Bearer '+token,
+        'apikey':SUPABASE_KEY,
+        'Content-Type': sendType
+      },
+      body
+    });
+    if(!res.ok){ let m=res.status; try{const j=await res.json(); m=j.message||j.error||m;}catch(_){} throw new Error(m); }
+    const url = db.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+    $(`#${p}_${targetField}`).value = url;
+    statusEl.innerHTML='✓ загружено'; statusEl.className='upl-status ok';
+    onChange&&onChange();
+  }catch(e){
+    console.error(e);
+    statusEl.innerHTML='✕ ошибка: '+esc(e.message||String(e));
+    statusEl.className='upl-status err';
+    toast('Ошибка загрузки: '+(e.message||e));
+  }finally{ setUploadBusy(false); }
+}
+
+function readGameForm(p){
+  const v=k=>$(`#${p}_${k}`).value.trim();
+  return {
+    id: slug(v('id')), title: v('title'), description: v('description')||null,
+    emoji: v('emoji')||'🎮', score_label: v('score_label')||'очков', status: v('status'),
+    genre: v('genre'), setting: v('setting'), difficulty: v('difficulty'),
+    accent: v('accent'), bg: v('bg'),
+    src: v('src'), thumbnail_url: v('thumbnail_url')||null,
+    build_type: v('src').startsWith(GAMES_CDN+'/') ? 'r2' : 'html'
+  };
+}
+function validGame(g){
+  if(!g.id) return 'Нужен id (slug)';
+  if(!g.title) return 'Нужно название';
+  if(g.title.length>30) return 'Название длиннее 30 символов';
+  if(!/^#[0-9a-f]{6}$/i.test(g.accent)) return 'Accent — hex вида #ff3c5f';
+  if(!/^#[0-9a-f]{6}$/i.test(g.bg)) return 'Фон — hex вида #0d080f';
+  if(!g.src) return 'Нужен файл игры или URL';
+  return null;
+}
+function fillGameForm(p,g){
+  const s=(k,val)=>{const el=$(`#${p}_${k}`);if(el)el.value=val??'';};
+  s('id',g.id); $(`#${p}_id`).dataset.touched='1';
+  s('title',g.title); s('description',g.description); s('emoji',g.emoji);
+  s('score_label',g.score_label); s('status',g.status); s('genre',g.genre);
+  s('setting',g.setting); s('difficulty',g.difficulty);
+  s('accent',g.accent); $(`#${p}_accent_c`).value=g.accent;
+  s('bg',g.bg); $(`#${p}_bg_c`).value=g.bg;
+  s('src',g.src); s('thumbnail_url',g.thumbnail_url);
+}
+
+// ════════ ADD PAGE ════════
+function renderAddForm(){
+  $('#add-form').innerHTML = gameFormHTML('a');
+  wireGameForm('a', updatePreview);
+  updatePreview();
+}
+function updatePreview(){
+  const g = readGameForm('a');
+  const card = $('#prev-card');
+  card.style.background = /^#[0-9a-f]{6}$/i.test(g.bg)?g.bg:'#0d080f';
+  card.innerHTML = (g.thumbnail_url?`<img class="pc-img" src="${esc(g.thumbnail_url)}">`:'')
+    + `<div class="pc-emoji">${esc(g.emoji)}</div>`
+    + `<div class="pc-title" style="color:${/^#[0-9a-f]{6}$/i.test(g.accent)?g.accent:'#fff'}">${esc(g.title||'Без названия')}</div>`;
+  const f=$('#prev-frame');
+  if(g.src && f.dataset.src!==g.src){f.dataset.src=g.src;renderGameIntoFrame(f,g.src);}
+}
+
+$('#add-now').addEventListener('click', async ()=>{
+  const g = readGameForm('a'); const err = validGame(g);
+  if(err){toast(err);return;}
+  g.author_id = $('#add-author').value;
+  await insertGames([g]);
+});
+$('#add-to-queue').addEventListener('click', ()=>{
+  const g = readGameForm('a'); const err = validGame(g);
+  if(err){toast(err);return;}
+  g.author_id = $('#add-author').value;
+  if(queue.length && queue[0].author_id!==g.author_id){
+    if(!confirm('В очереди игры другого автора. Очередь привязана к одному автору — очистить и начать заново?')) return;
+    queue=[];
+  }
+  if(queue.some(q=>q.id===g.id)){toast('id уже в очереди');return;}
+  queue.push(g);
+  renderQueue();
+  // reset form fields but keep author
+  renderAddForm();
+  toast('В очереди: '+queue.length);
+});
+function renderQueue(){
+  const wrap=$('#queue-list');
+  $('#q-author').textContent = queue.length?('@'+queue[0].author_id):'';
+  if(!queue.length){wrap.innerHTML='<div class="empty" style="padding:18px">Пусто</div>';$('#save-all').style.display='none';return;}
+  wrap.innerHTML = queue.map((g,i)=>`<div class="queue-item"><span class="qi-emoji">${esc(g.emoji)}</span><div><div style="font-weight:700;font-size:13px">${esc(g.title)}</div><div class="mono">${esc(g.id)} · ${esc(g.status)}</div></div><button class="qi-x" data-i="${i}">✕</button></div>`).join('');
+  wrap.querySelectorAll('.qi-x').forEach(b=>b.addEventListener('click',()=>{queue.splice(+b.dataset.i,1);renderQueue();}));
+  $('#q-n').textContent=queue.length;
+  $('#save-all').style.display='block';
+}
+$('#save-all').addEventListener('click', async ()=>{ await insertGames(queue.slice()); queue=[]; renderQueue(); });
+
+async function insertGames(list){
+  const rows = list.map(g=>({
+    id:g.id, title:g.title, description:g.description, author_id:g.author_id, src:g.src,
+    accent:g.accent, bg:g.bg, score_label:g.score_label, emoji:g.emoji,
+    genre:g.genre, setting:g.setting, difficulty:g.difficulty, status:g.status,
+    thumbnail_url:g.thumbnail_url,
+    published_at: g.status==='published'? new Date().toISOString(): null
+  }));
+  const {error}=await db.from('games').insert(rows);
+  if(error){toast('Ошибка: '+error.message);return;}
+  toast(`Сохранено игр: ${rows.length}`);
+  await loadGames(); buildIndexes(); renderGames(); renderProfiles();
+  renderAddForm();
+}
+
+// new author from add page
+$('#new-author-btn').addEventListener('click', ()=>openAuthorModal());
+
+// ════════ GAMES TABLE ════════
+['#f-status','#f-author','#f-search'].forEach(s=>$(s).addEventListener('input', ()=>{gamesPage=1;renderGames();}));
+function gameActions(g){
+  const a=[];
+  const btn=(label,cls,fn)=>`<button class="btn ${cls} sm" data-act="${fn}" data-id="${esc(g.id)}">${label}</button>`;
+  a.push(btn('🔗','ghost','share'));
+  a.push(btn('Превью','ghost','preview'));
+  if(g.status!=='deleted') a.push(btn('⬆ Обнов.','ghost','update'));
+  if(g.status==='draft'||g.status==='rejected') a.push(btn('Опубликовать','green','publish'));
+  if(g.status==='draft') a.push(btn('Отклонить','yellow','reject'));
+  if(g.status==='published') a.push(btn('Скрыть','yellow','hide'));
+  if(g.status==='hidden') a.push(btn('Показать','green','publish'));
+  if(g.status==='deleted') a.push(btn('Восстановить','green','publish'));
+  if(g.status==='deleted') a.push(btn('Удалить навсегда','red','purge'));
+  a.push(btn('Изм.','ghost','edit'));
+  if(g.status!=='deleted') a.push(btn('Удалить','red','delete'));
+  return `<div class="rowacts">${a.join('')}</div>`;
+}
+function renderGames(){
+  const st=$('#f-status').value, au=$('#f-author').value, q=$('#f-search').value.toLowerCase().trim();
+  let rows = GAMES.filter(g=>{
+    if(st && g.status!==st) return false;
+    if(au && g.author_id!==au) return false;
+    if(q && !(g.title.toLowerCase().includes(q)||g.id.toLowerCase().includes(q))) return false;
+    return true;
+  });
+  const total = rows.length;
+  $('#games-count').textContent = `${total} / ${GAMES.length}`;
+  if(!total){$('#games-table').innerHTML='<div class="empty">Ничего не найдено</div>';return;}
+  const pages = Math.ceil(total/GAMES_PER_PAGE);
+  if(gamesPage>pages) gamesPage=pages;
+  const start=(gamesPage-1)*GAMES_PER_PAGE;
+  const pageRows = rows.slice(start, start+GAMES_PER_PAGE);
+  $('#games-table').innerHTML = `<table class="tbl"><thead><tr>
+    <th>Игра</th><th>ID</th><th>Автор</th><th>Теги</th><th>Статус</th><th>Создана</th><th></th></tr></thead><tbody>${
+    pageRows.map(g=>{
+      const au=usersByName[g.author_id];
+      const thumb = (g.thumbnail_url && g.thumbnail_status==='active')
+        ? `<div class="thumb" style="background:${cssColor(g.bg)}"><img src="${esc(g.thumbnail_url)}"></div>`
+        : `<div class="thumb" style="background:${cssColor(g.bg)}">${esc(g.emoji)}</div>`;
+      return `<tr>
+        <td><div class="cellflex">${thumb}<div><div style="font-weight:700">${esc(g.title)}</div><div class="mono" style="opacity:.55;font-size:11px">v${g.version||1}</div></div></div></td>
+        <td><code class="idchip">${esc(g.id)}</code></td>
+        <td>${au?esc(au.display_name):'—'}<div class="mono">@${esc(g.author_id)}</div></td>
+        <td><div class="tags"><span class="tag">${esc(g.genre)}</span><span class="tag">${esc(g.setting)}</span><span class="tag">${esc(g.difficulty)}</span></div></td>
+        <td>${statusBadge(g.status)}</td>
+        <td class="mono">${fmtDate(g.created_at)}</td>
+        <td>${gameActions(g)}</td></tr>`;
+    }).join('')}</tbody></table>` + gamesPager(pages, total, start, pageRows.length);
+  $('#games-table').querySelectorAll('button[data-act]').forEach(b=>b.addEventListener('click',()=>onGameAct(b.dataset.act,b.dataset.id)));
+  $('#games-table').querySelectorAll('[data-page-go]').forEach(b=>b.addEventListener('click',()=>{gamesPage=+b.dataset.pageGo;renderGames();window.scrollTo(0,0);}));
+}
+function gamesPager(pages, total, start, shown){
+  if(pages<=1) return `<div class="pager"><span class="mono">Всего: ${total}</span></div>`;
+  let nums='';
+  for(let p=1;p<=pages;p++) nums+=`<button class="pgbtn${p===gamesPage?' active':''}" data-page-go="${p}">${p}</button>`;
+  return `<div class="pager">
+    <span class="mono">Показано ${start+1}–${start+shown} из ${total}</span>
+    <div class="pgnums">
+      <button class="pgbtn" data-page-go="${Math.max(1,gamesPage-1)}" ${gamesPage===1?'disabled':''}>‹</button>
+      ${nums}
+      <button class="pgbtn" data-page-go="${Math.min(pages,gamesPage+1)}" ${gamesPage===pages?'disabled':''}>›</button>
+    </div>
+  </div>`;
+}
+function shareLink(id){
+  const base = location.origin + location.pathname.replace(/admin\.html.*$/,'');
+  const url = base + '?g=' + encodeURIComponent(id);
+  if(navigator.clipboard){ navigator.clipboard.writeText(url).then(()=>toast('Ссылка скопирована')).catch(()=>prompt('Ссылка на игру:',url)); }
+  else prompt('Ссылка на игру:',url);
+}
+
+async function onGameAct(act,id){
+  const g = GAMES.find(x=>x.id===id); if(!g) return;
+  if(act==='preview'){ openPreview(g); return; }
+  if(act==='edit'){ openEditGame(g); return; }
+  if(act==='update'){ openUpdateModal(g); return; }
+  if(act==='share'){ shareLink(g.id); return; }
+  if(act==='purge'){
+    if(!confirm(`Удалить «${g.title}» НАВСЕГДА?\n\nИгра и её файл будут стёрты безвозвратно — восстановить будет нельзя.`)) return;
+    await hardDeleteGame(g); return;
+  }
+  let patch=null, msg='';
+  if(act==='publish'){ patch={status:'published', published_at: g.published_at||new Date().toISOString()}; msg='Опубликовано'; }
+  if(act==='reject'){ patch={status:'rejected'}; msg='Отклонено'; }
+  if(act==='hide'){ patch={status:'hidden'}; msg='Скрыто'; }
+  if(act==='delete'){ if(!confirm(`Удалить «${g.title}»? Игра уйдёт в статус deleted, восстановить можно.`))return; patch={status:'deleted'}; msg='Удалено'; }
+  if(!patch) return;
+  await updateGame(id, patch, msg);
+}
+async function updateGame(id, patch, msg){
+  const {error}=await db.from('games').update(patch).eq('id',id);
+  if(error){toast('Ошибка: '+error.message);return;}
+  Object.assign(GAMES.find(x=>x.id===id), patch);
+  buildIndexes(); renderGames(); renderProfiles();
+  if($('#prof-detail-view').style.display!=='none') renderProfDetail(currentProfId);
+  toast(msg||'Готово');
+}
+
+// ════════ ОБНОВЛЕНИЕ ВЕРСИИ ИГРЫ / СБРОС ПРОГРЕССА ════════
+// Через edge-функцию game-update: новая версия html кладётся отдельным
+// объектом Storage (<id>-v<N>.html), games.src/version обновляются, запись
+// уходит в журнал game_versions. Сброс прогресса = удаление облачных сейвов
+// игры во втором проекте (функция progress, action wipe_game) — право
+// проверяется независимо по JWT вызывающего (админ или автор игры).
+let updGame=null;
+function openUpdateModal(g){
+  updGame=g;
+  $('#um-title').textContent=`Обновить «${g.title}» · сейчас v${g.version||1}`;
+  $('#um-file').value=''; $('#um-note').value=''; $('#um-keep').checked=true;
+  renderUpdateHistory(g.id);
+  openModal('update-modal');
+}
+async function renderUpdateHistory(id){
+  const box=$('#um-history'); box.innerHTML='<span class="mono">история…</span>';
+  const {data,error}=await db.from('game_versions')
+    .select('version,note,wiped_progress,created_by,created_at')
+    .eq('game_id',id).order('created_at',{ascending:false}).limit(10);
+  if(error){ box.innerHTML='<span class="mono">история недоступна: '+esc(error.message)+'</span>'; return; }
+  if(!data||!data.length){ box.innerHTML='<span class="mono">обновлений ещё не было</span>'; return; }
+  box.innerHTML='<h3 style="margin:0 0 8px;font-size:13px">Журнал обновлений</h3>'+data.map(v=>
+    `<div class="mono" style="padding:4px 0;border-top:1px solid var(--line)">v${v.version} · ${fmtDate(v.created_at)} · @${esc(v.created_by)}${v.wiped_progress?' · 🧹 прогресс стёрт':''}${v.note?' — '+esc(v.note):''}</div>`
+  ).join('');
+}
+$('#um-go').addEventListener('click', async ()=>{
+  if(!updGame) return;
+  const f=$('#um-file').files[0]||null;
+  const wipe=$('#um-wipe').checked;
+  if(!f && !wipe){ toast('Выбери файл или отметь сброс прогресса'); return; }
+  const warn = f
+    ? (wipe?`Выпустить обновление «${updGame.title}» и БЕЗВОЗВРАТНО стереть облачный прогресс всех игроков?`
+           :`Выпустить обновление «${updGame.title}»? Прогресс игроков сохранится.`)
+    : `БЕЗВОЗВРАТНО стереть облачный прогресс всех игроков «${updGame.title}» (файл игры не меняется)?`;
+  if(!confirm(warn)) return;
+  const btn=$('#um-go'); btn.disabled=true; btn.textContent='Обновляю…';
+  try{
+    if(f && /\.zip$/i.test(f.name)){
+      // Многофайловый билд: новая версия = отдельная папка vN в R2, старые не трогаем.
+      if(wipe) throw new Error('сброс прогресса с zip пока не поддержан — сделай сброс отдельно без файла');
+      const nv=(updGame.version||1)+1;
+      const r=await uploadBuildZip(f, updGame.id, nv, t=>{btn.textContent=t;});
+      const {error}=await db.from('games').update({src:r.src, version:nv, build_type:'r2', build_size:r.size, build_files:r.files, updated_at:new Date().toISOString()}).eq('id',updGame.id);
+      if(error) throw new Error(error.message);
+      await db.from('game_versions').insert({game_id:updGame.id, version:nv, src:r.src, note:$('#um-note').value.trim()||null, wiped_progress:false, build_type:'r2', build_size:r.size, build_files:r.files});
+      const gg=GAMES.find(x=>x.id===updGame.id); if(gg) Object.assign(gg,{version:nv, src:r.src});
+      toast(`Обновление вышло: v${nv} (${r.files} файлов)`);
+      renderUpdateHistory(updGame.id); renderGames();
+      $('#um-file').value=''; $('#um-note').value='';
+      btn.disabled=false; btn.textContent='Выпустить обновление'; return;
+    }
+    const body={game_id:updGame.id, note:$('#um-note').value.trim()||null, wipe_progress:wipe};
+    if(f) body.html = await f.text();
+    const {data:{session}}=await db.auth.getSession();
+    const token=session&&session.access_token;
+    if(!token) throw new Error('сессия истекла — войдите заново');
+    const res=await fetch(`${SUPABASE_URL}/functions/v1/game-update`,{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+token,'apikey':SUPABASE_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+    const d=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(d.error||('HTTP '+res.status));
+    const gg=GAMES.find(x=>x.id===updGame.id);
+    if(gg) Object.assign(gg,{version:d.version, src:d.src});
+    let msg = f?`Обновление вышло: v${d.version}`:'Готово';
+    if(wipe && d.wiped) msg+=` · прогресс стёрт (${d.deleted??0} сейвов)`;
+    toast(msg);
+    if(wipe && !d.wiped) toast('Прогресс стереть не удалось: '+(d.wipe_error||'?')+' — повтори сброс');
+    renderUpdateHistory(updGame.id); renderGames();
+    $('#um-file').value=''; $('#um-note').value='';
+  }catch(e){ toast('Ошибка: '+(e.message||e)); }
+  btn.disabled=false; btn.textContent='Выпустить обновление';
+});
+async function deleteStorageByUrl(url){
+  if(!url) return;
+  const m = String(url).match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+  if(!m) return; // не Supabase Storage (например, ссылка на GitHub) — пропускаем
+  try{
+    const {data:{session}}=await db.auth.getSession();
+    const token = session && session.access_token;
+    if(!token) return;
+    await fetch(`${SUPABASE_URL}/storage/v1/object/${m[1]}/${m[2]}`,{
+      method:'DELETE', headers:{Authorization:'Bearer '+token, apikey:SUPABASE_KEY}
+    });
+  }catch(e){ console.warn('storage delete failed', e); }
+}
+async function hardDeleteGame(g){
+  const {data, error}=await db.from('games').delete().eq('id',g.id).select();
+  if(error){toast('Ошибка удаления: '+error.message);return;}
+  if(!data || !data.length){
+    toast('В БД не удалилось (0 строк) — нет delete-политики на таблице games');
+    return;
+  }
+  // строка удалена — теперь чистим файлы
+  await deleteStorageByUrl(g.src);
+  await deleteStorageByUrl(g.thumbnail_url);
+  GAMES = GAMES.filter(x=>x.id!==g.id);
+  buildIndexes(); renderGames(); renderProfiles();
+  if($('#prof-detail-view').style.display!=='none') renderProfDetail(currentProfId);
+  toast('Удалено навсегда');
+}
+
+// game preview modal
+// Игру нельзя грузить по URL из Storage (Supabase отдаёт HTML как text/plain),
+// поэтому скачиваем тело файла и вставляем через srcdoc — это игнорирует тип ответа.
+async function renderGameIntoFrame(frame, src){
+  if(!src){ frame.removeAttribute('srcdoc'); frame.src='about:blank'; return; }
+  frame.removeAttribute('srcdoc'); frame.src='about:blank';
+  // R2-билды (отдельный origin): прямой src + allow-same-origin, без srcdoc (иначе не найдутся .wasm/ассеты).
+  if(src.startsWith(GAMES_CDN+'/')){ frame.setAttribute('sandbox','allow-scripts allow-same-origin allow-pointer-lock'); frame.src=src; return; }
+  frame.setAttribute('sandbox','allow-scripts');
+  try{
+    const r = await fetch(src, {cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const html = await r.text();
+    frame.onload = ()=>{ try{ frame.contentWindow.postMessage({type:'init'},'*'); frame.contentWindow.postMessage({type:'start'},'*'); }catch(e){} };
+    frame.srcdoc = html;
+  }catch(e){
+    frame.srcdoc = '<body style="font-family:sans-serif;color:#ff7a90;background:#0d080f;padding:24px;margin:0">Не удалось загрузить игру: '+esc(String(e.message||e))+'</body>';
+  }
+}
+
+function openPreview(g){
+  $('#pm-title').textContent = g.title;
+  renderGameIntoFrame($('#pm-frame'), g.src);
+  const acts=[];
+  if(g.status!=='published') acts.push(`<button class="btn green sm" id="pm-pub">Опубликовать</button>`);
+  if(g.status==='draft') acts.push(`<button class="btn yellow sm" id="pm-rej">Отклонить</button>`);
+  $('#pm-acts').innerHTML=acts.join('');
+  $('#pm-pub')&&$('#pm-pub').addEventListener('click',()=>{updateGame(g.id,{status:'published',published_at:g.published_at||new Date().toISOString()},'Опубликовано');closeModal('preview-modal');});
+  $('#pm-rej')&&$('#pm-rej').addEventListener('click',()=>{updateGame(g.id,{status:'rejected'},'Отклонено');closeModal('preview-modal');});
+  openModal('preview-modal');
+}
+
+// edit game modal
+function openEditGame(g){
+  editingId=g.id;
+  $('#edit-form').innerHTML = gameFormHTML('e');
+  $('#e_id').disabled = true; // id — первичный ключ, не меняем
+  wireGameForm('e', null);
+  fillGameForm('e', g);
+  openModal('game-modal');
+}
+$('#em-save').addEventListener('click', async ()=>{
+  const g=readGameForm('e'); const err=validGame(g);
+  if(err){toast(err);return;}
+  const patch={title:g.title,description:g.description,emoji:g.emoji,score_label:g.score_label,
+    status:g.status,genre:g.genre,setting:g.setting,difficulty:g.difficulty,accent:g.accent,
+    bg:g.bg,src:g.src,thumbnail_url:g.thumbnail_url};
+  if(g.status==='published'){const cur=GAMES.find(x=>x.id===editingId);patch.published_at=cur.published_at||new Date().toISOString();}
+  await updateGame(editingId, patch, 'Изменения сохранены');
+  closeModal('game-modal');
+});
+
+// ════════ AUTHORS ════════
+$('#create-author-btn').addEventListener('click', ()=>openAuthorModal());
+let editingAuthor=null;
+function openAuthorModal(user){
+  editingAuthor = user||null;
+  $('#am-title').textContent = user?'Редактировать профиль':'Новый автор';
+  $('#am-username').value = user?user.username:''; $('#am-username').disabled=!!user;
+  $('#am-name').value = user?user.display_name:'';
+  $('#am-emoji').value = user?(user.avatar_emoji||'🎮'):'🎮';
+  $('#am-gradient').value = user?(user.gradient||$('#am-gradient').options[0].value):$('#am-gradient').options[0].value;
+  $('#am-bio').value = user?(user.bio||''):'';
+  openModal('author-modal');
+}
+$('#am-save').addEventListener('click', async ()=>{
+  const username = slug($('#am-username').value).replace(/-/g,'');
+  const name = $('#am-name').value.trim();
+  if(!editingAuthor && !username){toast('Нужен username');return;}
+  if(!name){toast('Нужно имя');return;}
+  const payload={display_name:name, avatar_emoji:$('#am-emoji').value||'🎮', gradient:$('#am-gradient').value, bio:$('#am-bio').value.trim()};
+  let error;
+  if(editingAuthor){
+    ({error}=await db.rpc('admin_update_user',{p_id:editingAuthor.id, p_patch:payload}));
+  }else{
+    ({error}=await db.rpc('admin_create_author',{
+      p_username:username, p_display_name:name,
+      p_avatar_emoji:payload.avatar_emoji, p_gradient:payload.gradient, p_bio:payload.bio
+    }));
+  }
+  if(error){toast('Ошибка: '+error.message);return;}
+  const wasEditing = editingAuthor;
+  toast(wasEditing?'Профиль обновлён':'Автор создан');
+  closeModal('author-modal');
+  await loadUsers(); buildIndexes(); fillAuthorSelects(); renderProfiles();
+  if(!wasEditing) $('#add-author').value = username;
+  // если открыта карточка этого профиля — обновим её
+  if(wasEditing && currentProfId===wasEditing.id && $('#prof-detail-view').style.display!=='none') renderProfDetail(currentProfId);
+});
+// Автор = есть опубликованные/любые игры, либо это виртуальный/управляемый аккаунт-автор.
+function isAuthor(u){ return !!(u.is_virtual || u.managed_by || (gameCountByAuthor[u.username]||0) > 0); }
+
+// ════════ PROFILES ════════
+['#pf-type','#pf-status','#pf-search'].forEach(s=>$(s).addEventListener('input', renderProfiles));
+let currentProfId=null;
+let profPeriod='all';     // период для статистики автора (день/7д/30д/всё)
+let profGameView=null;    // id игры для drill-in внутри карточки автора
+function showProfList(){ profGameView=null; $('#prof-list-view').style.display='block'; $('#prof-detail-view').style.display='none'; }
+$('#prof-back').addEventListener('click', showProfList);
+
+function renderProfiles(){
+  const ty=$('#pf-type').value, st=$('#pf-status').value, q=$('#pf-search').value.toLowerCase().trim();
+  let rows = USERS.filter(u=>{
+    const author=isAuthor(u);
+    if(ty==='authors' && !author) return false;
+    if(ty==='notauthors' && author) return false;
+    if(st && (u.status||'active')!==st) return false;
+    if(q && !(u.username.toLowerCase().includes(q)||(u.display_name||'').toLowerCase().includes(q))) return false;
+    return true;
+  });
+  $('#profiles-count').textContent = `${rows.length} / ${USERS.length}`;
+  if(!rows.length){$('#profiles-table').innerHTML='<div class="empty">Ничего не найдено</div>';return;}
+  $('#profiles-table').innerHTML = `<table class="tbl"><thead><tr>
+    <th>Профиль</th><th>Тип</th><th>Роль</th><th>Статус</th><th>18+</th><th>Игр</th><th></th></tr></thead><tbody>${
+    rows.map(u=>{
+      const status=u.status||'active';
+      const author=isAuthor(u);
+      return `<tr class="clickable" data-open="${esc(u.id)}">
+        <td><div class="cellflex"><div class="thumb" style="background:${cssColor(u.gradient)}">${esc(u.avatar_emoji||'👤')}</div><div><div style="font-weight:700">${esc(u.display_name)}</div><div class="mono">@${esc(u.username)}</div></div></div></td>
+        <td>${author?'<span class="badge b-admin">автор</span>':'<span class="mono">юзер</span>'}${u.is_virtual?' <span class="tag">virtual</span>':''}</td>
+        <td><span class="badge b-${esc(u.role)}">${esc(u.role)}</span></td>
+        <td>${statusBadge(status)}</td>
+        <td>${u.is_adult?'<span class="badge b-adult">18+</span>':'<span class="mono">—</span>'}</td>
+        <td>${gameCountByAuthor[u.username]||0}</td>
+        <td onclick="event.stopPropagation()">${profActions(u)}</td></tr>`;
+    }).join('')}</tbody></table>`;
+  $('#profiles-table').querySelectorAll('tr[data-open]').forEach(tr=>tr.addEventListener('click',()=>openProfDetail(tr.dataset.open)));
+  $('#profiles-table').querySelectorAll('button[data-pact]').forEach(b=>b.addEventListener('click',()=>onProfAct(b.dataset.pact,b.dataset.id)));
+}
+function profActions(u){
+  const status=u.status||'active';
+  const btn=(l,c,a)=>`<button class="btn ${c} sm" data-pact="${a}" data-id="${esc(u.id)}">${l}</button>`;
+  const a=[];
+  if(status==='active'){ a.push(btn('Скрыть','yellow','hide')); a.push(btn('Удалить','red','delete')); }
+  if(status==='hidden'){ a.push(btn('Восстановить','green','restore')); a.push(btn('Удалить','red','delete')); }
+  if(status==='deleted'){ a.push(btn('Восстановить','green','restore')); }
+  a.push(btn(u.is_adult?'Снять 18+':'18+', u.is_adult?'ghost':'red', 'adult'));
+  return `<div class="rowacts">${a.join('')}</div>`;
+}
+async function onProfAct(act,id){
+  const u=usersById[id]; if(!u) return;
+  let patch=null, msg='';
+  if(act==='hide'){patch={status:'hidden'};msg='Профиль скрыт';}
+  if(act==='restore'){patch={status:'active'};msg='Профиль восстановлен';}
+  if(act==='delete'){if(!confirm(`Удалить профиль @${u.username}? Мягкое удаление, восстановить можно.`))return;patch={status:'deleted'};msg='Профиль удалён';}
+  if(act==='adult'){patch={is_adult:!u.is_adult};msg=u.is_adult?'Снята метка 18+':'Помечено 18+';}
+  if(!patch) return;
+  const {error}=await db.rpc('admin_update_user',{p_id:id, p_patch:patch});
+  if(error){toast('Ошибка: '+error.message);return;}
+  Object.assign(u,patch);
+  renderProfiles();
+  if(currentProfId===id && $('#prof-detail-view').style.display!=='none') renderProfDetail(id);
+  toast(msg);
+}
+
+function openProfDetail(id){
+  currentProfId=id; profGameView=null;
+  $('#prof-list-view').style.display='none';
+  $('#prof-detail-view').style.display='block';
+  renderProfDetail(id);
+}
+function renderProfDetail(id){
+  const u=usersById[id]; if(!u){showProfList();return;}
+  // drill-in внутри профиля: статистика конкретной игры автора
+  if(profGameView){ renderProfGameDetail(u, profGameView); return; }
+  const status=u.status||'active';
+  const author=isAuthor(u);
+  const games = GAMES.filter(g=>g.author_id===u.username);
+  const head = `<div class="prof-head">
+    <div class="prof-av" style="background:${cssColor(u.gradient)}">${esc(u.avatar_emoji||'👤')}</div>
+    <div class="prof-meta">
+      <h2>${esc(u.display_name)}</h2>
+      <div class="ph">@${esc(u.username)} · ${esc(u.role)}${author?' · автор':''}</div>
+      <div class="pid">id: ${esc(u.id)}</div>
+      <div class="prof-badges">${statusBadge(status)}${u.is_adult?'<span class="badge b-adult">18+</span>':''}${u.is_virtual?'<span class="tag">virtual</span>':''}</div>
+    </div>
+    <div class="prof-acts"><button class="btn ghost sm" data-edit-prof="1">Изменить</button>${profActions(u)}</div>
+  </div>`;
+
+  // Карточка профиля: bio + подписки/подписчики (грузятся из основной базы) + игр.
+  const info = `<div class="card" style="margin-bottom:16px">
+    <h3>Профиль</h3>
+    <div class="tiles" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">
+      <div class="tile"><div class="tv" id="pf-following">…</div><div class="tl">Подписки</div></div>
+      <div class="tile"><div class="tv" id="pf-followers">…</div><div class="tl">Подписчики</div></div>
+      <div class="tile"><div class="tv">${gameCountByAuthor[u.username]||0}</div><div class="tl">Игр</div></div>
+    </div>
+    <div style="margin-top:14px"><div class="gm-label" style="margin-bottom:5px">Bio</div>
+      <div style="font-size:13px;color:var(--sub2);line-height:1.5">${u.bio?esc(u.bio):'<span class="mono">—</span>'}</div></div>
+  </div>`;
+
+  let html = head + info;
+  if(author){
+    html += `<div class="dash-section" id="prof-stats"></div>`;
+    html += `<h3 style="margin:10px 0 12px;font-size:15px">Игры автора (${games.length}) — модерация</h3>` + gamesModerationHTML(games);
+  }
+  $('#prof-detail').innerHTML = html;
+
+  // wire статичные элементы
+  $('#prof-detail').querySelector('button[data-edit-prof]')?.addEventListener('click',()=>openAuthorModal(u));
+  wireProfModeration();
+
+  // асинхронные части
+  loadProfFollowCounts(u);
+  if(author) renderAuthorStats(u, profPeriod);
+}
+
+// Карточки модерации игр автора (статус игры/обложки + действия).
+function gamesModerationHTML(games){
+  if(!games.length) return '<div class="empty">У автора нет игр</div>';
+  return games.map(g=>{
+    const ts=g.thumbnail_status||'active';
+    const cover = g.thumbnail_url
+      ? `<div class="thumb" style="width:48px;height:48px;background:${cssColor(g.bg)};${ts!=='active'?'opacity:.4':''}"><img src="${esc(g.thumbnail_url)}"></div>`
+      : `<div class="thumb" style="width:48px;height:48px;background:${cssColor(g.bg)}">${esc(g.emoji)}</div>`;
+    const gbtn=(l,c,a)=>`<button class="btn ${c} sm" data-gact="${a}" data-id="${esc(g.id)}">${l}</button>`;
+    const gacts=[];
+    if(g.status==='published'||g.status==='draft'||g.status==='rejected') gacts.push(gbtn('Скрыть','yellow','hide'));
+    if(g.status==='hidden') gacts.push(gbtn('Показать','green','publish'));
+    if(g.status==='deleted') gacts.push(gbtn('Восстановить','green','publish'));
+    if(g.status==='deleted') gacts.push(gbtn('Удалить навсегда','red','purge'));
+    if(g.status!=='deleted') gacts.push(gbtn('Удалить','red','delete'));
+    let cacts='';
+    if(g.thumbnail_url){
+      const cbtn=(l,c,a)=>`<button class="btn ${c} sm" data-cact="${a}" data-id="${esc(g.id)}">${l}</button>`;
+      const arr=[];
+      if(ts==='active') arr.push(cbtn('Скрыть','yellow','c_hide'));
+      if(ts!=='active') arr.push(cbtn('Восстановить','green','c_restore'));
+      if(ts!=='deleted') arr.push(cbtn('Удалить','red','c_delete'));
+      cacts=`<div class="gm-block"><span class="gm-label">обложка</span>${statusBadge(ts)}${arr.join('')}</div>`;
+    }else{
+      cacts=`<div class="gm-block"><span class="gm-label">обложка</span><span class="mono">нет</span></div>`;
+    }
+    return `<div class="gmod">
+      ${cover}
+      <div>
+        <div class="gm-title">${esc(g.title)} <span class="mono">${esc(g.id)}</span></div>
+        <div class="gm-block"><span class="gm-label">игра</span>${statusBadge(g.status)}${gacts.join('')}</div>
+        ${cacts}
+      </div>
+      <button class="btn ghost sm" data-preview="${esc(g.id)}">Превью</button>
+    </div>`;
+  }).join('');
+}
+function wireProfModeration(){
+  $('#prof-detail').querySelectorAll('button[data-pact]').forEach(b=>b.addEventListener('click',()=>onProfAct(b.dataset.pact,b.dataset.id)));
+  $('#prof-detail').querySelectorAll('button[data-gact]').forEach(b=>b.addEventListener('click',()=>onGameAct(b.dataset.gact,b.dataset.id)));
+  $('#prof-detail').querySelectorAll('button[data-cact]').forEach(b=>b.addEventListener('click',()=>onCoverAct(b.dataset.cact,b.dataset.id)));
+  $('#prof-detail').querySelectorAll('button[data-preview]').forEach(b=>b.addEventListener('click',()=>openPreview(GAMES.find(g=>g.id===b.dataset.preview))));
+}
+
+// Подписки/подписчики берём напрямую из таблицы follows (публичное чтение).
+async function loadProfFollowCounts(u){
+  try{
+    const [fg, fr] = await Promise.all([
+      db.from('follows').select('*',{count:'exact',head:true}).eq('follower_id', u.id),
+      db.from('follows').select('*',{count:'exact',head:true}).eq('followee_username', u.username),
+    ]);
+    const set=(sel,c)=>{ const el=$(sel); if(el) el.textContent = dashNf(c||0); };
+    set('#pf-following', fg.count);
+    set('#pf-followers', fr.count);
+  }catch(e){ console.warn('follow counts', e); }
+}
+
+// Статистика автора: агрегат по всем его играм + таблица с переходом в каждую игру.
+async function renderAuthorStats(u, period){
+  const el = $('#prof-stats'); if(!el) return;
+  const segs = ['day','7d','30d','all'].map(p=>`<button data-p="${p}"${p===period?' class="active"':''}>${({day:'День','7d':'7д','30d':'30д',all:'Всё'})[p]}</button>`).join('');
+  el.innerHTML = `<div class="dash-h"><span class="dot" style="background:var(--a1)"></span>Статистика автора
+      <span class="mini" style="margin:0 0 0 10px;align-self:center">${DASH_LABEL[period]}</span>
+      <div class="seg" id="prof-period" style="margin-left:auto">${segs}</div></div>
+    <div id="prof-stats-body"><div class="dash-loading">Загрузка статистики…</div></div>`;
+  el.querySelectorAll('#prof-period button').forEach(b=>b.addEventListener('click',()=>{
+    if(b.dataset.p===profPeriod) return; profPeriod=b.dataset.p; renderAuthorStats(u, profPeriod);
+  }));
+  const { from, to } = dashRange(period);
+  const res = await db.rpc('admin_games_overview', { p_from:from, p_to:to });
+  const body = $('#prof-stats-body'); if(!body) return;
+  if(res.error){ body.innerHTML = `<div class="empty">Ошибка: ${esc(res.error.message)}</div>`; return; }
+  const myIds = new Set(GAMES.filter(g=>g.author_id===u.username).map(g=>g.id));
+  const rows = (res.data||[]).filter(r=>myIds.has(r.game_id));
+  if(!rows.length){ body.innerHTML = '<div class="empty">Нет данных за период</div>'; return; }
+  let tImp=0,t3=0,t10=0,tLk=0,tCm=0,tSh=0,tSv=0,tPl=0,wTime=0,wN=0;
+  rows.forEach(g=>{
+    tImp+=Number(g.impressions)||0; t3+=Number(g.sessions_3s)||0; t10+=Number(g.sessions_10s)||0;
+    tLk+=Number(g.likes)||0; tCm+=Number(g.comments)||0; tSh+=Number(g.shares)||0; tSv+=Number(g.saves)||0;
+    tPl+=Number(g.players)||0;
+    const a=Number(g.avg_session_sec)||0, s=Number(g.sessions_3s)||0; if(a&&s){ wTime+=a*s; wN+=s; }
+  });
+  const hook = tImp? Math.round(1000*t10/tImp)/10 : 0;
+  const tiles = [
+    dashTile(rows.length,'Игр',''),
+    dashTile(dashNf(tImp),'Показы','загрузок'),
+    dashTile(dashNf(t3),'Сессии >3с','просмотры'),
+    dashTile(hook+'%','Hook >10с','из показов'),
+    dashTile(dashFmtDur(wN?wTime/wN:0),'Ср. время','сессии >3с'),
+    dashTile(dashNf(tLk),'Лайки',''),
+    dashTile(dashNf(tCm),'Комменты',''),
+    dashTile(dashNf(tSh),'Шеры',''),
+    dashTile(dashNf(tSv),'Избранное',''),
+  ].join('');
+  const trs = rows.map(g=>`<tr class="clickable" data-pgame="${esc(g.game_id)}">
+    <td><div class="cellflex"><div class="thumb" style="width:28px;height:28px;font-size:13px;background:${cssColor(g.bg,'#1a1a24')}">${esc(dashGemoji(g.game_id))}</div><div style="font-weight:700">${esc(g.title)}</div></div></td>
+    <td class="num">${dashNf(g.impressions)}</td>
+    <td class="num">${dashNf(g.sessions_3s)}</td>
+    <td class="num">${dashPctCell(g.hook_rate)}</td>
+    <td class="num">${dashFmtDur(g.avg_session_sec)}</td>
+    <td class="num">${dashPctCell(g.retention_d1)}</td>
+    <td class="num">${dashPctCell(g.retention_d7)}</td>
+    <td class="num">${dashNf(g.likes)}</td>
+    <td class="num">${dashNf(g.shares)}</td>
+  </tr>`).join('');
+  const table = `<table class="tbl"><thead><tr>
+      <th>Игра</th><th class="num">Показы</th><th class="num">Сессии&nbsp;&gt;3с</th><th class="num">Hook</th><th class="num">Ср.&nbsp;время</th><th class="num">D1</th><th class="num">D7</th><th class="num" title="Лайки">♥</th><th class="num" title="Шеры">↗</th>
+    </tr></thead><tbody>${trs}</tbody></table>`;
+  body.innerHTML = `<div class="tiles">${tiles}</div>
+    <div style="margin-top:14px">${table}</div>
+    <div class="dash-note">Клик по игре — подробная статистика этой игры. Метрики считаются за выбранный период.</div>`;
+  body.querySelectorAll('tr[data-pgame]').forEach(tr=>tr.addEventListener('click',()=>{
+    profGameView = tr.dataset.pgame; window.scrollTo(0,0); renderProfDetail(currentProfId);
+  }));
+}
+
+// Детальная страница игры внутри карточки автора (та же, что в разделе «Игры»).
+async function renderProfGameDetail(u, gameId){
+  const el = $('#prof-detail');
+  const backHtml = `<button class="btn ghost sm" id="prof-game-back" style="margin-bottom:16px">← К автору @${esc(u.username)}</button>`;
+  const wireBack = ()=>{ const b=$('#prof-game-back'); if(b) b.addEventListener('click',()=>{ profGameView=null; window.scrollTo(0,0); renderProfDetail(currentProfId); }); };
+  el.innerHTML = backHtml + '<div class="dash-loading">Загрузка статистики игры…</div>';
+  wireBack();
+  const { from, to } = dashRange(profPeriod);
+  try{
+    const [det, gts] = await Promise.all([
+      db.rpc('admin_game_detail',      { p_game_id:gameId, p_from:from, p_to:to }),
+      db.rpc('admin_games_timeseries', { p_from:from, p_to:to, p_bucket:'day', p_game_id:gameId }),
+    ]);
+    const err = det.error||gts.error;
+    el.innerHTML = backHtml + (err ? `<div class="empty">Ошибка: ${esc(err.message)}</div>` : dashRenderGameDetail(det.data, gts.data));
+  }catch(e){
+    el.innerHTML = backHtml + `<div class="empty">Ошибка: ${esc(e.message||String(e))}</div>`;
+  }
+  wireBack();
+}
+async function onCoverAct(act,id){
+  let patch=null,msg='';
+  if(act==='c_hide'){patch={thumbnail_status:'hidden'};msg='Обложка скрыта';}
+  if(act==='c_restore'){patch={thumbnail_status:'active'};msg='Обложка восстановлена';}
+  if(act==='c_delete'){if(!confirm('Скрыть обложку как удалённую? Файл в Storage сохранится, восстановить можно.'))return;patch={thumbnail_status:'deleted'};msg='Обложка удалена';}
+  if(!patch)return;
+  const {error}=await db.from('games').update(patch).eq('id',id);
+  if(error){toast('Ошибка: '+error.message);return;}
+  Object.assign(GAMES.find(x=>x.id===id),patch);
+  renderProfDetail(currentProfId); renderGames();
+  toast(msg);
+}
+
+// ════════ MODAL UTILS ════════
+function openModal(id){$('#'+id).classList.add('on');}
+function closeModal(id){$('#'+id).classList.remove('on'); if(id==='preview-modal'){const f=$('#pm-frame');f.removeAttribute('srcdoc');f.src='about:blank';}}
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.closest('.modal').id)));
+document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id);}));
+</script>
+</body>
+</html>

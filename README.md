@@ -32,3 +32,11 @@ node serve.js 5080
 ```
 
 (нужен только для предпросмотра; ES-модули не работают с file://)
+
+
+## Объединение с sharky_play (мобильная версия)
+- `feed.html` + `engine.js` — вертикальная лента (бывший `sharky_play/index.html`). Телефон/узкий экран с `/` уходит в ленту (`js/mobile-redirect.js`), `?catalog=1` — остаться в каталоге.
+- `admin.html` — админка (загрузка .html и .zip-билдов в R2).
+- `games/` — встроенные игры, `privacy.html`, `terms.html`.
+- `supabase/functions/tg-auth`, `supabase/migrations` — серверная часть.
+- `workers/sharky-games` — Worker для многофайловых билдов (R2).
