@@ -32,3 +32,11 @@ node serve.js 5080
 ```
 
 (нужен только для предпросмотра; ES-модули не работают с file://)
+
+
+## Объединение с sharky_play (мобильная версия)
+Сайт остаётся каталогом (YouTube-стиль) на всех экранах; TikTok-ленту не переносили.
+- `admin.html` — админка (загрузка .html и .zip-билдов в R2 через `workers/sharky-games`).
+- `games/` — 40 встроенных игр, `privacy.html`, `terms.html`.
+- `supabase/functions/` — исходники, снятые с задеплоенных версий (2026-10-26): `tg-auth` v8 (initData / widget / logintoken / link), `tg-login` (вебхук бота, подтверждает вход), `game-update` (обновление версии из админки).
+- `supabase/migrations`, `workers/sharky-games`.
